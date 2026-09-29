@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Willkommen · Escape Bewerbung</title>
+  <link rel="stylesheet" href="css/fiori.css" />
+  <style>
+    .intro-wrap {
+      width: 100%;
+      max-width: 560px;
+      padding: 0 1rem;
+    }
+    .intro-text {
+      font-size: 0.9375rem;
+      line-height: 1.75;
+      color: var(--text-muted);
+      margin-bottom: 2.5rem;
+    }
+    .intro-text p + p { margin-top: 0.875rem; }
+    .intro-text strong { color: var(--text); font-weight: 600; }
+
+    /* Timer */
+    .timer-block {
+      background: rgba(99,102,241,0.07);
+      border: 1px solid rgba(99,102,241,0.2);
+      border-radius: var(--radius-sm);
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .timer-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-subtle);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .timer-value {
+      font-size: 4rem;
+      font-weight: 700;
+      color: var(--brand);
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+      transition: color 0.3s;
+    }
+    .timer-value.urgent { color: var(--danger); }
+    .timer-track {
+      width: 100%;
+      height: 4px;
+      background: rgba(255,255,255,0.08);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .timer-bar {
+      height: 100%;
+      background: var(--brand);
+      border-radius: 2px;
+      transition: width 1s linear, background 0.3s;
+      box-shadow: 0 0 8px var(--brand-glow);
+    }
+    .timer-bar.urgent {
+      background: var(--danger);
+      box-shadow: 0 0 8px rgba(239,68,68,0.4);
+    }
+  </style>
+</head>
+<body>
+  <div class="fiori-shell">
+    <img src="img/logo.png" alt="SAP Escape" class="shell-logo-img" />
+    <span class="shell-spacer"></span>
+    <span id="hdrTimer" style="font-variant-numeric:tabular-nums;font-weight:700;font-size:0.9375rem;padding:0.2rem 0.625rem;background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:6px;margin-right:0.75rem">--:--</span>
+    <button class="shell-logout" onclick="logout()">Abmelden</button>
+  </div>
+  <div class="center-page" style="min-height:calc(100vh - 3.25rem)">
+    <div class="intro-wrap">
+    <!-- Warn-Karte: zuerst sichtbar -->
+    <div class="fiori-card" id="warningCard">
+      <div class="intro-text">
+        <p><strong>Achtung:</strong> Die nächste Ansicht enthält wichtige Informationen, die du nur <strong>10 Sekunden</strong> lang sehen kannst. Lies aufmerksam und bereite dich vor, bevor du fortfährst.</p>
+      </div>
+      <button class="btn btn-primary btn-full" id="startBtn" style="margin-top:0.5rem;height:2.75rem">Ich bin bereit →</button>
+    </div>
+
+    <!-- Timer-Karte: erst nach Weiter sichtbar -->
+    <div class="fiori-card" id="timerCard" style="display:none">
+      <div class="intro-text">
+        <p>Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet.</p>
+      </div>
+      <div class="timer-block">
+        <span class="timer-label">Weiter in</span>
+        <span class="timer-value" id="timerValue">10</span>
+        <div class="timer-track">
+          <div class="timer-bar" id="timerBar" style="width:100%"></div>
+        </div>
+      </div>
+    </div>
+    </div>
+  </div>
+
+  <script>
+    const token = localStorage.getItem('token');
+    if (!token) { window.location.href = 'index.html'; }
+
+    function logout() {
+      localStorage.removeItem('token');
+      localStorage.removeItem('role');
+      window.location.href = 'index.html';
+    }
+
+    async function setProgress(puzzle, status) {
+      await fetch('/api/puzzle/progress', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ puzzle, status })
+      });
+    }
+
+    const DURATION = 10;
+    let remaining = DURATION;
+    const valueEl = document.getElementById('timerValue');
+    const barEl   = document.getElementById('timerBar');
+
+    function startTimer() {
+      const interval = setInterval(async () => {
+        remaining--;
+        valueEl.textContent = remaining;
+        barEl.style.width = (remaining / DURATION * 100) + '%';
+
+        if (remaining <= 3) {
+          valueEl.classList.add('urgent');
+          barEl.classList.add('urgent');
+        }
+        if (remaining <= 0) {
+          clearInterval(interval);
+          // "Verlassen" of the timed puzzle counts as solved
+          await setProgress('timed', 'solved');
+          window.location.href = 'scratch.html';
+        }
+      }, 1000);
+    }
+
+    // Guard first, then reveal the warning card
+    (async () => {
+      const res = await fetch('/api/me', { headers: { 'Authorization': 'Bearer ' + token } });
+      if (!res.ok) { window.location.href = 'index.html'; return; }
+      const user = await res.json();
+      if (user.p_timed === 'solved') {
+        window.location.href = 'scratch.html';
+        return;
+      }
+      await setProgress('timed', 'started');
+      startLocationTimer(user.location_id);
+    })();
+
+    // ── Location countdown in header ──
+    function startLocationTimer(locId) {
+      if (!locId) return;
+      const el = document.getElementById('hdrTimer');
+      const tick = async () => {
+        const r = await fetch('/api/timer/' + locId);
+        if (!r.ok) return;
+        const t = await r.json();
+        const s = Math.max(0, Math.floor(t.remaining_ms / 1000));
+        el.textContent = String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0');
+        el.style.color = t.remaining_ms <= 60000 ? '#f87171' : '';
+        if (t.state === 'finished') return;
+        if (t.remaining_ms <= 0) { window.location.href = 'timeout.html'; return; }
+        if (t.state !== 'running') { window.location.href = 'paused.html'; return; }
+      };
+      tick();
+      setInterval(tick, 1000);
+    }
+
+    // Timer starts only after the player clicks "Weiter"
+    document.getElementById('startBtn').addEventListener('click', () => {
+      document.getElementById('warningCard').style.display = 'none';
+      document.getElementById('timerCard').style.display = '';
+      startTimer();
+    });
+  </script>
+</body>
+</html>

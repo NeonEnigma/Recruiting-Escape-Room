@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pausiert · Escape Bewerbung</title>
+  <link rel="stylesheet" href="css/fiori.css" />
+  <style>
+    .pause-wrap { width: 100%; max-width: 480px; padding: 0 1rem; text-align: center; }
+    .pause-icon { font-size: 4rem; margin-bottom: 1.5rem; display: block; }
+    .pause-title { font-size: 1.75rem; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 0.75rem; color: #fbbf24; }
+    .pause-sub { color: var(--text-muted); font-size: 1rem; line-height: 1.6; }
+    .pulse-dot {
+      display:inline-block; width: 8px; height: 8px; border-radius: 50%;
+      background: #fbbf24; margin-right: 0.4rem;
+      animation: pulse 1.4s ease-in-out infinite;
+    }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+  </style>
+</head>
+<body class="center-page">
+  <div class="pause-wrap">
+    <span class="pause-icon">⏸️</span>
+    <div class="fiori-card">
+      <h2 class="pause-title">Pausiert</h2>
+      <p class="pause-sub"><span class="pulse-dot"></span>Der Timer wurde angehalten.<br>Sobald es weitergeht, wirst du automatisch fortgesetzt.</p>
+    </div>
+  </div>
+  <script>
+    const token = localStorage.getItem('token');
+    if (!token) window.location.href = 'index.html';
+
+    // Poll: as soon as the timer runs again, resume the puzzle flow
+    (async () => {
+      const me = await fetch('/api/me', { headers: { 'Authorization': 'Bearer ' + token } });
+      if (!me.ok) { window.location.href = 'index.html'; return; }
+      const user = await me.json();
+
+      function resumeUrl(u) {
+        if (u.p_ai === 'solved') return 'dashboard-player.html';
+        if (u.p_dev === 'solved') return 'ai.html';
+        if (u.p_timed === 'solved') return 'scratch.html';
+        return 'intro.html';
+      }
+
+      const check = async () => {
+        const r = await fetch('/api/timer/' + user.location_id);
+        if (!r.ok) return;
+        const t = await r.json();
+        if (t.remaining_ms <= 0) { window.location.href = 'timeout.html'; return; }
+        if (t.state === 'running') window.location.href = resumeUrl(user);
+      };
+      check();
+      setInterval(check, 1500);
+    })();
+  </script>
+</body>
+</html>

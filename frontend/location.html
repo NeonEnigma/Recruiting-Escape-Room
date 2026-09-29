@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Standort wählen · Escape Bewerbung</title>
+  <link rel="stylesheet" href="css/fiori.css" />
+  <style>
+    .loc-wrap {
+      width: 100%;
+      max-width: 460px;
+      padding: 0 1rem;
+    }
+    .loc-header {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 2rem;
+    }
+    .loc-icon {
+      width: 52px; height: 52px;
+      background: linear-gradient(135deg, var(--brand), #8b5cf6);
+      border-radius: 16px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 24px;
+      box-shadow: 0 0 32px var(--brand-glow);
+    }
+    .loc-header h1 { font-size: 1.375rem; font-weight: 700; letter-spacing: -0.02em; }
+    .loc-header p { font-size: 0.875rem; color: var(--text-muted); margin-top: -0.25rem; }
+
+    .loc-list { display: flex; flex-direction: column; gap: 0.625rem; }
+    .loc-btn {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      padding: 0.875rem 1.125rem;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border-input);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 0.9375rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .loc-btn:hover {
+      border-color: var(--brand);
+      background: rgba(99,102,241,0.1);
+      transform: translateY(-1px);
+    }
+    .loc-btn .loc-name { display: flex; align-items: center; gap: 0.625rem; }
+    .loc-btn .loc-time {
+      font-variant-numeric: tabular-nums;
+      font-size: 0.8125rem;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+    .loc-empty { text-align: center; color: var(--text-subtle); padding: 2rem 0; }
+  </style>
+</head>
+<body class="center-page">
+  <div class="loc-wrap">
+    <div class="loc-header">
+      <div class="loc-icon">📍</div>
+      <h1>Standort wählen</h1>
+      <p>Wähle deinen Standort, um fortzufahren</p>
+    </div>
+    <div class="loc-list" id="locList">
+      <div class="loc-empty">Lade Standorte…</div>
+    </div>
+    <div style="text-align:center;margin-top:1.5rem">
+      <a onclick="openAdmin()" style="font-size:0.8125rem;color:var(--text-subtle);cursor:pointer;text-decoration:none">Als Admin anmelden</a>
+    </div>
+  </div>
+
+  <!-- Admin login modal -->
+  <div id="adminBackdrop" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);z-index:200;align-items:center;justify-content:center;padding:1rem">
+    <div style="background:#161b27;border:1px solid var(--border);border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,0.5);padding:2rem;width:100%;max-width:360px">
+      <h3 style="font-size:1rem;font-weight:700;margin-bottom:1.25rem">Admin-Anmeldung</h3>
+      <div class="form-group">
+        <label for="adminUser">Benutzername</label>
+        <input type="text" id="adminUser" value="admin" autocomplete="username" />
+      </div>
+      <div class="form-group">
+        <label for="adminPw">Passwort</label>
+        <input type="password" id="adminPw" placeholder="••••••••" autocomplete="current-password" />
+      </div>
+      <div class="error-msg" id="adminError"></div>
+      <div style="display:flex;gap:0.75rem;justify-content:flex-end;margin-top:1rem">
+        <button type="button" class="btn btn-ghost" onclick="closeAdmin()">Abbrechen</button>
+        <button type="button" class="btn btn-primary" onclick="adminLogin()">Anmelden →</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function fmt(ms) {
+      const s = Math.max(0, Math.floor(ms / 1000));
+      const m = Math.floor(s / 60);
+      return String(m).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0');
+    }
+
+    async function load() {
+      const res = await fetch('/api/locations');
+      const locs = res.ok ? await res.json() : [];
+      const list = document.getElementById('locList');
+      if (locs.length === 0) {
+        list.innerHTML = '<div class="loc-empty">Keine Standorte verfügbar.</div>';
+        return;
+      }
+      // Fetch each location's timer for display
+      const withTime = await Promise.all(locs.map(async l => {
+        const t = await fetch('/api/timer/' + l.id).then(r => r.ok ? r.json() : { remaining_ms: 0 });
+        return { ...l, remaining_ms: t.remaining_ms };
+      }));
+      list.innerHTML = withTime.map(l => `
+        <button class="loc-btn" onclick="choose(${l.id}, '${l.name.replace(/'/g, "\\'")}')">
+          <span class="loc-name">📍 ${l.name}</span>
+          <span class="loc-time">⏱ ${fmt(l.remaining_ms)}</span>
+        </button>
+      `).join('');
+    }
+
+    function choose(id, name) {
+      localStorage.setItem('location_id', id);
+      localStorage.setItem('location_name', name);
+      window.location.href = 'index.html';
+    }
+
+    // ── Admin login ──
+    function openAdmin() {
+      document.getElementById('adminError').textContent = '';
+      document.getElementById('adminPw').value = '';
+      document.getElementById('adminBackdrop').style.display = 'flex';
+      document.getElementById('adminPw').focus();
+    }
+    function closeAdmin() {
+      document.getElementById('adminBackdrop').style.display = 'none';
+    }
+    async function adminLogin() {
+      const username = document.getElementById('adminUser').value.trim();
+      const password = document.getElementById('adminPw').value;
+      const err = document.getElementById('adminError');
+      err.textContent = '';
+      const res = await fetch('/api/login', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+      const data = await res.json();
+      if (!res.ok || data.role !== 'admin') {
+        err.textContent = data.error || 'Anmeldung fehlgeschlagen.';
+        return;
+      }
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('role', data.role);
+      window.location.href = 'admin.html';
+    }
+    document.getElementById('adminPw').addEventListener('keydown', e => { if (e.key === 'Enter') adminLogin(); });
+
+    load();
+  </script>
+</body>
+</html>

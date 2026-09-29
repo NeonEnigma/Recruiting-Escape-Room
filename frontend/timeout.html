@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Zeit abgelaufen · Escape Bewerbung</title>
+  <link rel="stylesheet" href="css/fiori.css" />
+  <style>
+    .timeout-wrap {
+      width: 100%;
+      max-width: 480px;
+      padding: 0 1rem;
+      text-align: center;
+    }
+    .timeout-icon {
+      font-size: 4rem;
+      margin-bottom: 1.5rem;
+      display: block;
+    }
+    .timeout-title {
+      font-size: 1.75rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.75rem;
+      color: #f87171;
+    }
+    .timeout-sub {
+      color: var(--text-muted);
+      font-size: 1rem;
+      line-height: 1.6;
+      margin-bottom: 1.75rem;
+    }
+  </style>
+</head>
+<body class="center-page">
+  <div class="timeout-wrap">
+    <span class="timeout-icon">⏰</span>
+    <div class="fiori-card">
+      <h2 class="timeout-title">Zeit abgelaufen</h2>
+      <p class="timeout-sub">Deine verfügbare Zeit ist aufgebraucht.<br>Bitte wende dich an die Betreuung.</p>
+      <button class="btn btn-primary btn-full" onclick="logout()">Abmelden</button>
+    </div>
+  </div>
+  <script>
+    function logout() {
+      localStorage.removeItem('token');
+      localStorage.removeItem('role');
+      window.location.href = 'location.html';
+    }
+  </script>
+</body>
+</html>

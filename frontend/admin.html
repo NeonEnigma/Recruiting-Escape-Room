@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin · Escape Bewerbung</title>
+  <link rel="stylesheet" href="css/fiori.css" />
+  <style>
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1.25rem;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+    .section-title {
+      font-size: 1.0625rem;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: -0.01em;
+    }
+    .loc-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.75rem 1rem;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+    .loc-row .loc-info { display: flex; align-items: center; gap: 0.75rem; }
+    .loc-state {
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 0.15rem 0.5rem;
+      border-radius: 999px;
+      background: rgba(148,163,184,0.12);
+      color: var(--text-subtle);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .loc-state.running { background: rgba(34,197,94,0.12); color: #4ade80; }
+    .loc-state.paused  { background: rgba(251,191,36,0.12); color: #fbbf24; }
+    .loc-state.finished { background: rgba(34,197,94,0.12); color: #4ade80; }
+    .shell-logout {
+      height: 2rem; padding: 0 0.875rem; font-size: 0.8125rem; border-radius: 6px;
+      background: rgba(255,255,255,0.06); color: var(--text-muted);
+      border: 1px solid var(--border); cursor: pointer; font-family: var(--font); font-weight: 500;
+    }
+    .shell-logout:hover { background: rgba(255,255,255,0.1); color: var(--text); }
+    .field-row { display: flex; gap: 0.5rem; align-items: center; }
+    .status-note { font-size: 0.8125rem; color: #4ade80; }
+    .pw-field { position: relative; }
+    .pw-field input { padding-right: 2.75rem; width: 100%; }
+    .pw-eye {
+      position: absolute;
+      right: 0.5rem; top: 50%; transform: translateY(-50%);
+      width: 2rem; height: 2rem;
+      display: flex; align-items: center; justify-content: center;
+      background: transparent; border: none; cursor: pointer;
+      color: var(--text); opacity: 0.55; transition: opacity 0.12s;
+      border-radius: 6px;
+      padding: 0;
+    }
+    .pw-eye:hover { opacity: 1; background: rgba(255,255,255,0.06); }
+  </style>
+</head>
+<body>
+  <div class="fiori-shell">
+    <img src="img/logo.png" alt="SAP Escape" class="shell-logo-img" />
+    <span class="shell-suffix" style="margin-left:0.75rem">Admin</span>
+    <span class="shell-spacer"></span>
+    <button class="shell-logout" onclick="logout()">Abmelden</button>
+  </div>
+
+  <div class="page-content">
+
+    <!-- Locations -->
+    <div class="section-header">
+      <h2 class="section-title">Standorte</h2>
+    </div>
+    <div class="fiori-card">
+      <p style="font-size:0.8125rem;color:var(--text-subtle);margin-bottom:1.25rem">
+        Jeder Standort hat automatisch einen Spieler (John) und einen Spectator.
+        Der Spieler kann sich nur anmelden, wenn der Timer läuft.
+      </p>
+      <div id="locationList" style="display:flex;flex-direction:column;gap:0.5rem;margin-bottom:1.25rem"></div>
+      <div class="field-row">
+        <input type="text" id="newLocationName" placeholder="Neuer Standort (z.B. Dresden)" autocomplete="off"
+          style="flex:1;height:2.5rem;padding:0 0.875rem;background:rgba(255,255,255,0.05);border:1px solid var(--border-input);border-radius:8px;color:var(--text);font-family:var(--font);font-size:0.9375rem;outline:none" />
+        <button class="btn btn-primary" onclick="addLocation()">+ Anlegen</button>
+      </div>
+      <div class="error-msg" id="locationError"></div>
+    </div>
+
+    <!-- Global passwords -->
+    <div class="section-header" style="margin-top:2.5rem">
+      <h2 class="section-title">Zugangsdaten</h2>
+    </div>
+    <div class="fiori-card">
+      <p style="font-size:0.8125rem;color:var(--text-subtle);margin-bottom:1.25rem">
+        Gelten für alle Standorte. Der Spieler meldet sich als „John" an, der Beobachter als „Spectator".
+      </p>
+      <div class="form-group">
+        <label for="johnPw">Passwort für John (Spieler)</label>
+        <div class="pw-field">
+          <input type="password" id="johnPw" autocomplete="off" />
+          <button type="button" class="pw-eye" data-eye onclick="togglePw('johnPw', this)" aria-label="Passwort anzeigen"></button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="specPw">Passwort für Spectator</label>
+        <div class="pw-field">
+          <input type="password" id="specPw" autocomplete="off" />
+          <button type="button" class="pw-eye" data-eye onclick="togglePw('specPw', this)" aria-label="Passwort anzeigen"></button>
+        </div>
+      </div>
+      <div class="field-row">
+        <button class="btn btn-primary" id="pwSaveBtn" onclick="savePasswords()">Speichern</button>
+        <span class="status-note" id="pwStatus"></span>
+      </div>
+      <div class="error-msg" id="pwError"></div>
+    </div>
+
+    <!-- AI configuration -->
+    <div class="section-header" style="margin-top:2.5rem">
+      <h2 class="section-title">KI-Konfiguration</h2>
+    </div>
+    <div class="fiori-card">
+      <p style="font-size:0.8125rem;color:var(--text-subtle);margin-bottom:1.25rem">
+        Aktuell ist eine Mock-KI aktiv – die Joule-Studio-Anbindung folgt.
+      </p>
+      <div class="form-group">
+        <label for="aiEndpoint">Agent-Endpoint (URL)</label>
+        <input type="text" id="aiEndpoint" placeholder="https://…" autocomplete="off" />
+      </div>
+      <div class="form-group">
+        <label for="aiToken">Auth-Token / API-Key</label>
+        <div class="pw-field">
+          <input type="password" id="aiToken" placeholder="••••••••" autocomplete="new-password" />
+          <button type="button" class="pw-eye" data-eye onclick="togglePw('aiToken', this)" aria-label="Token anzeigen"></button>
+        </div>
+      </div>
+      <div class="field-row">
+        <button class="btn btn-primary" id="aiSaveBtn" onclick="saveAiConfig()">Speichern</button>
+        <span class="status-note" id="aiConfigStatus"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Confirm Modal -->
+  <div class="modal-backdrop" id="confirmBackdrop" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);z-index:200;align-items:center;justify-content:center;padding:1rem">
+    <div class="modal" style="max-width:380px;background:#161b27;border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-lg);padding:2rem">
+      <h2 id="confirmTitle" style="font-size:1.0625rem;font-weight:700;margin-bottom:1rem">Bestätigen</h2>
+      <p id="confirmText" style="font-size:0.9375rem;color:var(--text-muted);line-height:1.6"></p>
+      <div style="display:flex;gap:0.75rem;justify-content:flex-end;margin-top:1.5rem">
+        <button type="button" class="btn btn-ghost" onclick="closeConfirm()">Abbrechen</button>
+        <button type="button" class="btn btn-danger" id="confirmOkBtn">Bestätigen</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const token = localStorage.getItem('token');
+    if (!token || localStorage.getItem('role') !== 'admin') window.location.href = 'index.html';
+    const authHeader = { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' };
+
+    function esc(str) {
+      return String(str).replace(/[&<>"']/g, c =>
+        ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+    }
+
+    // Minimalist white eye icons (open / closed)
+    const EYE_OPEN = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>';
+    const EYE_OFF  = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
+
+    // Toggle password field visibility
+    function togglePw(id, btn) {
+      const input = document.getElementById(id);
+      const show = input.type === 'password';
+      input.type = show ? 'text' : 'password';
+      btn.innerHTML = show ? EYE_OFF : EYE_OPEN;
+    }
+    // Initialize all eye buttons with the open icon
+    document.querySelectorAll('[data-eye]').forEach(b => { b.innerHTML = EYE_OPEN; });
+
+    // ── Confirm modal ──
+    function showConfirm(text, title = 'Bestätigen') {
+      return new Promise(resolve => {
+        const backdrop = document.getElementById('confirmBackdrop');
+        document.getElementById('confirmTitle').textContent = title;
+        document.getElementById('confirmText').textContent = text;
+        const okBtn = document.getElementById('confirmOkBtn');
+        const cleanup = (r) => { backdrop.style.display = 'none'; okBtn.onclick = null; backdrop.onclick = null; resolve(r); };
+        okBtn.onclick = () => cleanup(true);
+        backdrop.onclick = (e) => { if (e.target === backdrop) cleanup(false); };
+        window.closeConfirm = () => cleanup(false);
+        backdrop.style.display = 'flex';
+      });
+    }
+
+    // Render a colored badge for a single puzzle status
+    function puzzleBadge(label, status) {
+      const s = status || 'none';
+      const style = {
+        solved:  'background:rgba(34,197,94,0.12);color:#4ade80;border-color:rgba(34,197,94,0.3)',
+        started: 'background:rgba(251,191,36,0.12);color:#fbbf24;border-color:rgba(251,191,36,0.3)',
+        none:    'background:rgba(255,255,255,0.04);color:var(--text-subtle);border-color:var(--border)'
+      }[s];
+      const txt = { solved: 'Gelöst', started: 'Läuft', none: 'Offen' }[s];
+      return `<span style="display:inline-flex;align-items:center;gap:0.3rem;padding:0.15rem 0.55rem;border:1px solid;border-radius:999px;font-size:0.7rem;font-weight:600;${style}">${label}: ${txt}</span>`;
+    }
+
+    // ── Locations ──
+    async function loadLocations() {
+      const res = await fetch('/api/admin/locations', { headers: authHeader });
+      const locs = res.ok ? await res.json() : [];
+      const list = document.getElementById('locationList');
+      if (locs.length === 0) {
+        list.innerHTML = '<div style="color:var(--text-subtle);font-size:0.875rem">Keine Standorte angelegt.</div>';
+        return;
+      }
+      list.innerHTML = locs.map(l => {
+        const st = l.timer_state || 'idle';
+        const label = { idle:'Bereit', running:'Läuft', paused:'Pausiert', stopped:'Gestoppt', finished:'Beendet' }[st] || st;
+        const secs = Math.max(0, Math.floor((l.remaining_ms || 0) / 1000));
+        const clock = String(Math.floor(secs / 60)).padStart(2, '0') + ':' + String(secs % 60).padStart(2, '0');
+        const touched = (l.p_timed && l.p_timed !== 'none') || (l.p_dev && l.p_dev !== 'none') || (l.p_ai && l.p_ai !== 'none');
+        return `
+        <div class="loc-row" style="flex-direction:column;align-items:stretch;gap:0.75rem">
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <div class="loc-info">
+              <span style="font-weight:600">📍 ${esc(l.name)}</span>
+              <span class="loc-state ${st}">${label}</span>
+              <span style="font-variant-numeric:tabular-nums;font-weight:700;font-size:0.9375rem;padding:0.1rem 0.5rem;background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:6px;${l.remaining_ms <= 60000 ? 'color:#f87171' : 'color:var(--text)'}">⏱ ${clock}</span>
+            </div>
+            <button class="btn btn-danger" style="height:2rem;padding:0 0.75rem;font-size:0.8125rem"
+              onclick="deleteLocation(${l.id}, '${esc(l.name).replace(/'/g, "\\'")}')">Löschen</button>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:0.75rem;flex-wrap:wrap">
+            <div style="display:flex;gap:0.4rem;flex-wrap:wrap">
+              ${puzzleBadge('Timed', l.p_timed)}
+              ${puzzleBadge('Dev', l.p_dev)}
+              ${puzzleBadge('AI', l.p_ai)}
+            </div>
+            <button class="btn btn-ghost" style="height:1.85rem;padding:0 0.7rem;font-size:0.8125rem;${touched ? '' : 'opacity:0.45;cursor:not-allowed'}"
+              onclick="${touched ? `resetProgress(${l.id}, '${esc(l.name).replace(/'/g, "\\'")}')` : ''}" ${touched ? '' : 'disabled'}>
+              Fortschritt zurücksetzen
+            </button>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    async function resetProgress(id, name) {
+      if (!(await showConfirm(`Rätsel-Fortschritt von "${name}" zurücksetzen? Der Chat wird ebenfalls gelöscht.`, 'Fortschritt zurücksetzen'))) return;
+      await fetch('/api/admin/locations/' + id + '/reset', { method: 'POST', headers: authHeader });
+      loadLocations();
+    }
+
+    async function addLocation() {
+      const input = document.getElementById('newLocationName');
+      const errEl = document.getElementById('locationError');
+      errEl.textContent = '';
+      const name = input.value.trim();
+      if (!name) return;
+      const res = await fetch('/api/admin/locations', { method: 'POST', headers: authHeader, body: JSON.stringify({ name }) });
+      const data = await res.json();
+      if (!res.ok) { errEl.textContent = data.error || 'Fehler'; return; }
+      input.value = '';
+      loadLocations();
+    }
+
+    async function deleteLocation(id, name) {
+      if (!(await showConfirm(`Standort "${name}" inkl. Spieler und Spectator löschen?`, 'Standort löschen'))) return;
+      await fetch('/api/admin/locations/' + id, { method: 'DELETE', headers: authHeader });
+      loadLocations();
+    }
+
+    // ── Global passwords ──
+    async function loadPasswords() {
+      const res = await fetch('/api/admin/passwords', { headers: authHeader });
+      if (!res.ok) return;
+      const p = await res.json();
+      document.getElementById('johnPw').value = p.john || '';
+      document.getElementById('specPw').value = p.spectator || '';
+    }
+
+    async function savePasswords() {
+      const btn = document.getElementById('pwSaveBtn');
+      const errEl = document.getElementById('pwError');
+      const statusEl = document.getElementById('pwStatus');
+      errEl.textContent = '';
+      const john = document.getElementById('johnPw').value.trim();
+      const spectator = document.getElementById('specPw').value.trim();
+      if (!john || !spectator) { errEl.textContent = 'Beide Passwörter erforderlich.'; return; }
+      btn.disabled = true; btn.textContent = '…';
+      const res = await fetch('/api/admin/passwords', { method: 'POST', headers: authHeader, body: JSON.stringify({ john, spectator }) });
+      btn.disabled = false; btn.textContent = 'Speichern';
+      if (!res.ok) { const d = await res.json(); errEl.textContent = d.error || 'Fehler'; return; }
+      statusEl.textContent = 'Gespeichert ✓';
+      setTimeout(() => { statusEl.textContent = ''; }, 2500);
+    }
+
+    // ── AI configuration ──
+    async function loadAiConfig() {
+      const res = await fetch('/api/admin/ai-config', { headers: authHeader });
+      if (!res.ok) return;
+      const cfg = await res.json();
+      document.getElementById('aiEndpoint').value = cfg.ai_endpoint || '';
+      document.getElementById('aiToken').value = cfg.ai_token || '';
+    }
+
+    async function saveAiConfig() {
+      const btn = document.getElementById('aiSaveBtn');
+      const statusEl = document.getElementById('aiConfigStatus');
+      btn.disabled = true; btn.textContent = '…';
+      await fetch('/api/admin/ai-config', {
+        method: 'POST', headers: authHeader,
+        body: JSON.stringify({
+          ai_endpoint: document.getElementById('aiEndpoint').value.trim(),
+          ai_token: document.getElementById('aiToken').value.trim()
+        })
+      });
+      btn.disabled = false; btn.textContent = 'Speichern';
+      statusEl.textContent = 'Gespeichert ✓';
+      setTimeout(() => { statusEl.textContent = ''; }, 2500);
+    }
+
+    function logout() {
+      localStorage.removeItem('token');
+      localStorage.removeItem('role');
+      window.location.href = 'index.html';
+    }
+
+    loadLocations();
+    loadPasswords();
+    loadAiConfig();
+    setInterval(loadLocations, 1000); // keep timer + progress fresh
+  </script>
+</body>
+</html>

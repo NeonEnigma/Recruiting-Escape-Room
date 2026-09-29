@@ -1,0 +1,11 @@
+applications:
+  - name: escape-bewerbung
+    memory: 256M
+    instances: 1
+    buildpacks:
+      - nodejs_buildpack
+    command: node backend/server.js
+    path: .
+    env:
+      NODE_ENV: production
+      # Set JWT_SECRET via: cf set-env escape-bewerbung JWT_SECRET <your-secret>
