@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./config.js"></script>
 <script src="./support.js"></script>
 </head>
 <body>
@@ -82,54 +83,52 @@
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props="{&quot;showProtoNav&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;}}">
 class Component extends DCLogic {
-  KEY = 'mlEscape.v4';
   MAX = 8;
   STAGES = ['Login', 'Programmierung', 'KI-Training', 'Geschafft'];
-  state = { now: Date.now(), name: '', city: '', err: '', confirm: null };
+  state = { now: Date.now(), name: '', city: '', err: '', confirm: null, busy: false };
+  // Serverzustand (per Polling) und Uhrabgleich zum Server
+  db = null; off = 0;
 
-  fresh() { return { sid: Math.random().toString(36).slice(2), team: '', status: 'idle', startedAt: null, elapsed: 0, duration: 1800000, stage: 0, stageAt: [], hint: null, fails: 0 }; }
-  loadDB() {
-    let d = null;
-    try { d = JSON.parse(localStorage.getItem(this.KEY)); } catch (e) {}
-    if (!d || !d.locations) {
-      d = { locations: [{ id: 'wdf', name: 'Walldorf Campus', city: 'Walldorf' }, { id: 'ber', name: 'Berlin Mitte', city: 'Berlin' }, { id: 'muc', name: 'München Ost', city: 'München' }], sessions: {} };
-      d.locations.forEach(l => d.sessions[l.id] = this.fresh());
-      localStorage.setItem(this.KEY, JSON.stringify(d));
-    }
-    return d;
+  clock() { return Date.now() + this.off; }
+  api(path, body, method) {
+    const opt = body === undefined && !method ? { cache: 'no-store' } : { method: method || 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}) };
+    return fetch(location.origin + '/api' + path, opt).then(r => r.json().catch(() => ({})).then(d => {
+      if (d.state) this.apply(d.state);
+      if (!r.ok) throw new Error(d.error || 'Serverfehler (' + r.status + ')');
+      return d;
+    }));
   }
-  save(d) { localStorage.setItem(this.KEY, JSON.stringify(d)); this.setState({ now: Date.now() }); }
+  apply(st) { this.db = st; this.off = st.serverNow - Date.now(); this.setState({ now: this.clock() }); }
+  poll() { this.api('/state').then(st => this.apply(st)).catch(() => this.setState({ err: 'Server nicht erreichbar – es wird erneut versucht.' })); }
+
   remaining(s, now) { if (!s) return 0; return Math.max(0, s.duration - s.elapsed - (s.status === 'running' ? now - s.startedAt : 0)); }
   fmt(ms) { const t = Math.ceil(ms / 1000); return String(Math.floor(t / 60)).padStart(2, '0') + ':' + String(t % 60).padStart(2, '0'); }
-  componentDidMount() { this.tick = setInterval(() => this.setState({ now: Date.now() }), 500); }
-  componentWillUnmount() { clearInterval(this.tick); clearTimeout(this.ct); }
+  componentDidMount() {
+    this.poll();
+    this.tick = setInterval(() => this.setState({ now: this.clock() }), 500);
+    this.pollT = setInterval(() => this.poll(), 2000);
+  }
+  componentWillUnmount() { clearInterval(this.tick); clearInterval(this.pollT); clearTimeout(this.ct); }
 
   add() {
-    const d = this.loadDB();
+    if (this.state.busy) return;
     const name = this.state.name.trim(), city = this.state.city.trim();
-    if (d.locations.length >= this.MAX) return this.setState({ err: 'Maximal 8 Standorte möglich. Bitte zuerst einen löschen.' });
     if (!name || !city) return this.setState({ err: 'Bitte Bezeichnung und Stadt angeben.' });
-    if (d.locations.some(l => l.name.toLowerCase() === name.toLowerCase())) return this.setState({ err: 'Dieser Standort existiert bereits.' });
-    const base = city.toLowerCase().normalize('NFD').replace(/[^a-z]/g, '').slice(0, 3) || 'loc';
-    let id = base, i = 2;
-    while (d.locations.some(l => l.id === id)) id = base + i++;
-    d.locations.push({ id, name, city });
-    d.sessions[id] = this.fresh();
-    this.setState({ name: '', city: '', err: '' });
-    this.save(d);
+    this.setState({ busy: true });
+    this.api('/locations', { name, city })
+      .then(() => this.setState({ name: '', city: '', err: '', busy: false }))
+      .catch(e => this.setState({ err: e.message, busy: false }));
   }
   del(id) {
     if (this.state.confirm !== id) {
       this.setState({ confirm: id }); clearTimeout(this.ct);
       this.ct = setTimeout(() => this.setState({ confirm: null }), 3000); return;
     }
-    const d = this.loadDB();
-    d.locations = d.locations.filter(l => l.id !== id); delete d.sessions[id];
     this.setState({ confirm: null });
-    this.save(d);
+    this.api('/locations/' + encodeURIComponent(id), undefined, 'DELETE').catch(e => this.setState({ err: e.message }));
   }
   renderVals() {
-    const db = this.loadDB(); const now = this.state.now;
+    const db = this.db || { locations: [], sessions: {} }; const now = this.state.now;
     const status = s => {
       if (!s || s.status === 'idle') return 'Bereit';
       if (s.status === 'finished') return 'Geschafft';
@@ -137,6 +136,7 @@ class Component extends DCLogic {
       if (s.status === 'paused') return 'Pausiert';
       return 'Läuft';
     };
+    const cfg = window.ESCAPE_CONFIG;
     return {
       clock: new Date(now).toLocaleTimeString('de-DE'),
       count: String(db.locations.length),
@@ -145,8 +145,8 @@ class Component extends DCLogic {
       onName: e => this.setState({ name: e.target.value, err: '' }),
       onCity: e => this.setState({ city: e.target.value, err: '' }),
       onKey: e => { if (e.key === 'Enter') this.add(); },
-      add: () => this.add(), full: db.locations.length >= this.MAX,
-      empty: !db.locations.length,
+      add: () => this.add(), full: db.locations.length >= this.MAX || this.state.busy,
+      empty: !!this.db && !db.locations.length,
       rows: db.locations.map(l => {
         const s = db.sessions[l.id]; const st = status(s); const c = this.state.confirm === l.id;
         return {
@@ -159,7 +159,7 @@ class Component extends DCLogic {
           delBg: c ? 'var(--color-text)' : 'transparent', delColor: c ? 'var(--color-bg)' : 'var(--color-neutral-700)', delBorder: c ? 'var(--color-text)' : 'var(--color-divider)'
         };
       }),
-      showNav: this.props.showProtoNav ?? true
+      showNav: (this.props.showProtoNav ?? true) && (cfg ? cfg.protoNav : true)
     };
   }
 }

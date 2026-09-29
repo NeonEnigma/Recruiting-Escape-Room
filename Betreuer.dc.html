@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./config.js"></script>
 <script src="./support.js"></script>
 </head>
 <body>
@@ -27,6 +28,7 @@
       </sc-for>
     </aside>
     <main style="flex:999 1 560px;min-width:0;display:flex;flex-direction:column;gap:24px;padding:28px;box-sizing:border-box">
+      <sc-if value="{{ hasErr }}" hint-placeholder-val="{{ false }}"><span style="font-size:14px;font-weight:500">✕ {{ err }}</span></sc-if>
       <sc-if value="{{ noLoc }}" hint-placeholder-val="{{ false }}">
         <p style="color:var(--color-neutral-700)">Keine Standorte vorhanden. Bitte im Superadmin anlegen.</p>
       </sc-if>
@@ -109,7 +111,7 @@
                     <h3 style="margin:0;font-size:22px">1 · Login</h3>
                     <div style="display:grid;grid-template-columns:auto 1fr;gap:6px 16px;font-size:15px">
                       <span style="color:var(--color-neutral-700)">Name</span><span>beliebig (Teamname, darf nicht leer sein)</span>
-                      <span style="color:var(--color-neutral-700)">Passwort</span><span style="font-family:ui-monospace,monospace;font-weight:700">onboarding</span>
+                      <span style="color:var(--color-neutral-700)">Passwort</span><span style="font-family:ui-monospace,monospace;font-weight:700">{{ playerPassword }}</span>
                     </div>
                     <span style="font-size:13px;color:var(--color-neutral-700)">Groß-/Kleinschreibung egal.</span>
                   </div>
@@ -169,26 +171,26 @@
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props="{&quot;showProtoNav&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;}}">
 class Component extends DCLogic {
-  KEY = 'mlEscape.v4';
   STAGES = ['Login', 'Programmieraufgabe', 'KI-Training', 'Escape Room geschafft'];
-  state = { now: Date.now(), sel: null, hintText: '', confirmReset: false };
+  state = { now: Date.now(), sel: null, hintText: '', confirmReset: false, err: '' };
+  // Serverzustand (per Polling) und Uhrabgleich zum Server
+  db = null; off = 0; playerPassword = 'onboarding';
 
-  fresh() { return { sid: Math.random().toString(36).slice(2), team: '', status: 'idle', startedAt: null, elapsed: 0, duration: 1800000, stage: 0, stageAt: [], hint: null, fails: 0 }; }
-  loadDB() {
-    let d = null;
-    try { d = JSON.parse(localStorage.getItem(this.KEY)); } catch (e) {}
-    if (!d || !d.locations) {
-      d = { locations: [{ id: 'wdf', name: 'Walldorf Campus', city: 'Walldorf' }, { id: 'ber', name: 'Berlin Mitte', city: 'Berlin' }, { id: 'muc', name: 'München Ost', city: 'München' }], sessions: {} };
-      d.locations.forEach(l => d.sessions[l.id] = this.fresh());
-      localStorage.setItem(this.KEY, JSON.stringify(d));
-    }
-    return d;
+  clock() { return Date.now() + this.off; }
+  api(path, body) {
+    const opt = body === undefined ? { cache: 'no-store' } : { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) };
+    return fetch(location.origin + '/api' + path, opt).then(r => r.json().catch(() => ({})).then(d => {
+      if (d.state) this.apply(d.state);
+      if (!r.ok) throw new Error(d.error || 'Serverfehler (' + r.status + ')');
+      return d;
+    }));
   }
-  update(id, fn) {
-    const d = this.loadDB();
-    if (d.sessions[id]) { d.sessions[id] = fn(d.sessions[id]) || d.sessions[id]; localStorage.setItem(this.KEY, JSON.stringify(d)); }
-    this.setState({ now: Date.now() });
+  apply(st) { this.db = st; this.off = st.serverNow - Date.now(); this.setState({ now: this.clock(), err: '' }); }
+  poll() { this.api('/state').then(st => this.apply(st)).catch(() => this.setState({ err: 'Server nicht erreichbar – es wird erneut versucht.' })); }
+  act(id, action, body) {
+    this.api('/sessions/' + id + '/' + action, body || {}).catch(e => this.setState({ err: e.message }));
   }
+
   remaining(s, now) { if (!s) return 0; return Math.max(0, s.duration - s.elapsed - (s.status === 'running' ? now - s.startedAt : 0)); }
   fmt(ms) { const t = Math.ceil(ms / 1000); return String(Math.floor(t / 60)).padStart(2, '0') + ':' + String(t % 60).padStart(2, '0'); }
   hhmm(t) { return new Date(t).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }); }
@@ -202,12 +204,15 @@ class Component extends DCLogic {
   componentDidMount() {
     const q = new URLSearchParams(window.location.search).get('loc');
     this.setState({ sel: q || localStorage.getItem('mlEscape.betreuerLoc') });
-    this.tick = setInterval(() => this.setState({ now: Date.now() }), 250);
+    this.poll();
+    this.api('/staff').then(d => { this.playerPassword = d.playerPassword; }).catch(() => {});
+    this.tick = setInterval(() => this.setState({ now: this.clock() }), 250);
+    this.pollT = setInterval(() => this.poll(), 1000);
   }
-  componentWillUnmount() { clearInterval(this.tick); clearTimeout(this.rt); }
+  componentWillUnmount() { clearInterval(this.tick); clearInterval(this.pollT); clearTimeout(this.rt); }
 
   renderVals() {
-    const db = this.loadDB(); const now = this.state.now;
+    const db = this.db || { locations: [], sessions: {} }; const now = this.state.now;
     const loc = db.locations.find(l => l.id === this.state.sel) || db.locations[0];
     const id = loc && loc.id;
     const s = loc ? db.sessions[loc.id] : null;
@@ -221,8 +226,10 @@ class Component extends DCLogic {
       ['Messreihen', 'Vergleicht jeden Wert mit dem möglichen Bereich im Tabellenkopf. Und: Gibt es eine Sensor-ID zweimal?'],
       ['Allgemein', 'Ihr seid auf dem richtigen Weg – lest die Fehlermeldung genau.']
     ];
+    const cfg = window.ESCAPE_CONFIG;
     return {
       clock: new Date(now).toLocaleTimeString('de-DE'),
+      err: this.state.err, hasErr: !!this.state.err,
       locs: db.locations.map(l => {
         const ss = db.sessions[l.id]; const st = this.statusOf(ss, now);
         return {
@@ -233,7 +240,7 @@ class Component extends DCLogic {
           pick: () => { localStorage.setItem('mlEscape.betreuerLoc', l.id); this.setState({ sel: l.id, confirmReset: false }); }
         };
       }),
-      noLoc: !loc, hasLoc: !!loc,
+      noLoc: !!this.db && !loc, hasLoc: !!loc,
       city: loc ? loc.city.toUpperCase() : '', locName: loc ? loc.name : '', team: s && s.team ? s.team : '—',
       terminalUrl: loc ? 'Spieler.dc.html?loc=' + loc.id : '#',
       statusLabel: label.toUpperCase(),
@@ -242,18 +249,15 @@ class Component extends DCLogic {
       timerSub: status === 'finished' ? 'Benötigte Zeit' : status === 'idle' ? 'Spielzeit 30 Minuten' : 'Restzeit · Gesamt ' + this.fmt(s.duration),
       timePct: s ? Math.round((status === 'finished' ? s.elapsed / s.duration : rem / s.duration) * 100) + '%' : '0%',
       isIdle: status === 'idle', isActive: status === 'running' || status === 'paused', notIdle: status !== 'idle',
-      start: () => this.update(id, x => { x.status = 'running'; x.startedAt = Date.now(); x.elapsed = 0; x.duration = 1800000; }),
-      togglePause: () => this.update(id, x => {
-        if (x.status === 'running') { x.elapsed += Date.now() - x.startedAt; x.status = 'paused'; }
-        else { x.startedAt = Date.now(); x.status = 'running'; }
-      }),
+      start: () => this.act(id, 'start'),
+      togglePause: () => this.act(id, status === 'running' ? 'pause' : 'resume'),
       pauseLabel: status === 'paused' ? 'Fortsetzen' : 'Pausieren',
-      plus5: () => this.update(id, x => { x.duration += 300000; }),
-      minus5: () => this.update(id, x => { x.duration = Math.max(60000, x.duration - 300000); }),
+      plus5: () => this.act(id, 'adjust', { minutes: 5 }),
+      minus5: () => this.act(id, 'adjust', { minutes: -5 }),
       reset: () => {
         if (!this.state.confirmReset) { this.setState({ confirmReset: true }); clearTimeout(this.rt); this.rt = setTimeout(() => this.setState({ confirmReset: false }), 3000); return; }
         this.setState({ confirmReset: false });
-        this.update(id, () => this.fresh());
+        this.act(id, 'reset');
       },
       resetLabel: this.state.confirmReset ? 'Wirklich zurücksetzen?' : 'Session zurücksetzen',
       resetBorder: this.state.confirmReset ? ink : 'var(--color-divider)', resetColor: this.state.confirmReset ? ink : 'var(--color-neutral-700)', resetFw: this.state.confirmReset ? 700 : 600,
@@ -261,17 +265,20 @@ class Component extends DCLogic {
         const stg = s ? s.stage : 0, active = s && status !== 'idle';
         const done = active && (i < stg || (status === 'finished' && i === 3));
         const cur = active && i === stg && status !== 'finished';
-        const at = i === 0 ? s && s.startedAt && active ? null : null : s && s.stageAt[i - 1];
         return { n: done ? '✓' : String(i + 1), label, state: done ? (s.stageAt[i] ? 'erledigt ' + this.hhmm(s.stageAt[i]) : 'erledigt') : cur ? (i === 2 && s.fails ? 'aktuell · ' + s.fails + '× fehlgeschlagen' : 'aktuell') : '', border: done || cur ? acc : 'var(--color-divider)', bg: done ? acc : 'transparent', fg: done ? 'var(--color-bg)' : cur ? acc : muted, lc: done || cur ? ink : muted, sc: cur ? 'var(--color-accent-700)' : 'var(--color-neutral-700)' };
       }),
       quickHints: quick.map(([label, text]) => ({ label, use: () => this.setState({ hintText: text }) })),
       hintText: this.state.hintText, onHint: e => this.setState({ hintText: e.target.value }),
-      sendHint: () => { const t = this.state.hintText.trim(); if (!t) return; this.update(id, x => { x.hint = { text: t, t: Date.now() }; }); this.setState({ hintText: '' }); },
+      sendHint: () => {
+        const t = this.state.hintText.trim(); if (!t) return;
+        this.api('/sessions/' + id + '/hint', { text: t }).then(() => this.setState({ hintText: '' })).catch(e => this.setState({ err: e.message }));
+      },
       lastHint: s && s.hint ? 'Zuletzt gesendet ' + this.hhmm(s.hint.t) : '',
+      playerPassword: this.playerPassword,
       showSolution: !!this.state.solution,
       solutionLabel: this.state.solution ? 'Lösung ausblenden' : 'Lösung anzeigen',
       toggleSolution: () => this.setState(st => ({ solution: !st.solution })),
-      showNav: this.props.showProtoNav ?? true
+      showNav: (this.props.showProtoNav ?? true) && (cfg ? cfg.protoNav : true)
     };
   }
 }

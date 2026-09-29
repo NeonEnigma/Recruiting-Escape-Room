@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./config.js"></script>
 <script src="./support.js"></script>
 </head>
 <body>
@@ -263,66 +264,60 @@
   </sc-if>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props="{&quot;password&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;onboarding&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;showProtoNav&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;}}">
+<script type="text/x-dc" data-dc-script data-props="{&quot;showProtoNav&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;}}">
 class Component extends DCLogic {
-  KEY = 'mlEscape.v4';
-  COLS = [
-    { key: 'id', label: 'Sensor-ID', desc: 'Kennung des Messgeräts', rel: 'ign' },
-    { key: 'maschine', label: 'Maschine', desc: 'Bezeichnung in der Halle', rel: 'ign' },
-    { key: 'farbe', label: 'Gehäusefarbe', desc: 'Lackierung der Maschine', rel: 'ign' },
-    { key: 'techniker', label: 'Techniker:in', desc: 'Zuständig für die letzte Prüfung', rel: 'ign' },
-    { key: 'temp', label: 'Temperatur', desc: 'Lagertemperatur in °C', range: '20 – 120 °C', rel: 'feat' },
-    { key: 'vib', label: 'Vibration', desc: 'Schwinggeschwindigkeit in mm/s', range: '0 – 25 mm/s', rel: 'feat' },
-    { key: 'rpm', label: 'Drehzahl', desc: 'Umdrehungen pro Minute', range: '500 – 3.000 U/min', rel: 'feat' },
-    { key: 'std', label: 'Betriebsstunden', desc: 'Seit der letzten Wartung', range: '0 – 5.000 h', rel: 'feat' },
-    { key: 'kosten', label: 'Reparaturkosten', desc: 'In € – nach dem Ausfall erfasst', range: '€', rel: 'leak' },
-    { key: 'ausfall', label: 'Ausfall in 24 h', desc: 'Ist die Maschine ausgefallen? Ja / Nein', range: 'Ja / Nein', rel: 'target' }
-  ];
-  ROWS = [
-    ['S-201','Presse 1','Grau','M. Weber',64,3.1,1450,820,0,'Nein'],
-    ['S-202','Fräse 2','Blau','J. Koch',98,14.2,2780,4310,4200,'Ja'],
-    ['S-203','Presse 3','Grau','A. Yilmaz',71,4.0,1520,1250,0,'Nein'],
-    ['S-204','Drehbank 1','Grün','M. Weber',9999,5.2,1600,900,0,'Nein'],
-    ['S-205','Fräse 1','Blau','L. Braun',105,18.7,2900,4780,5100,'Ja'],
-    ['S-206','Presse 2','Grau','J. Koch',58,-4.0,1380,300,0,'Nein'],
-    ['S-207','Drehbank 2','Grün','A. Yilmaz',88,11.5,2400,3600,3800,'Ja'],
-    ['S-208','Fräse 3','Blau','L. Braun',67,3.8,'',1100,0,'Nein'],
-    ['S-202','Fräse 2','Blau','J. Koch',98,14.2,2780,4310,4200,'Ja'],
-    ['S-209','Presse 4','Grau','M. Weber',62,2.9,1410,640,0,'Nein'],
-    ['S-210','Drehbank 3','Grün','J. Koch',76,6.1,310000,1900,0,'Nein'],
-    ['S-211','Fräse 4','Blau','A. Yilmaz',101,16.3,2850,4550,4700,'Ja'],
-    ['S-212','Presse 5','Grau','L. Braun',69,4.4,1500,72000,0,'Nein'],
-    ['S-213','Drehbank 4','Grün','M. Weber',55,2.2,1300,420,0,'Nein'],
-    ['S-214','Fräse 5','Blau','J. Koch',94,13.8,2700,4020,3900,'Ja']
-  ];
-  BAD = [3, 5, 7, 10, 12];
-  DUP = [1, 8];
-  cleanCheck(rm) {
-    const dupRm = this.DUP.filter(i => rm[i]).length;
-    const left = this.BAD.filter(i => !rm[i]).length + (dupRm === 0 ? 1 : 0);
-    const wrong = Object.keys(rm).filter(k => rm[k] && !this.BAD.includes(+k) && !this.DUP.includes(+k)).length + (dupRm === 2 ? 1 : 0);
-    return { left, wrong };
-  }
   MODULES = [['Presse 1 · Halle A', 'STABIL'], ['Fräse 2 · Halle A', 'AUSFALLRISIKO · WARTUNG GEPLANT'], ['Drehbank 1 · Halle B', 'STABIL'], ['Fräse 4 · Halle B', 'AUSFALLRISIKO · WARTUNG GEPLANT'], ['Presse 5 · Halle C', 'STABIL'], ['Drehbank 4 · Halle C', 'STABIL']];
-  state = { now: Date.now(), loc: null, sid: null, name: '', pw: '', loginErr: '', roles: {}, removed: {}, tp: 0, training: false, run: null, result: null, modDone: 0, hintSeen: 0, tab: 0 };
+  state = { now: Date.now(), loc: null, sid: null, name: '', pw: '', loginErr: '', busy: false, roles: {}, removed: {}, tp: 0, training: false, run: null, result: null, modDone: 0, hintSeen: 0, tab: 0 };
+  // Serverzustand (per Polling), Uhrabgleich zum Server und Rätseldaten
+  db = null; off = 0; netErr = false; cols = []; rows = [];
 
-  fresh() { return { sid: Math.random().toString(36).slice(2), team: '', status: 'idle', startedAt: null, elapsed: 0, duration: 1800000, stage: 0, stageAt: [], hint: null, fails: 0 }; }
-  loadDB() {
-    let d = null;
-    try { d = JSON.parse(localStorage.getItem(this.KEY)); } catch (e) {}
-    if (!d || !d.locations) {
-      d = { locations: [{ id: 'wdf', name: 'Walldorf Campus', city: 'Walldorf' }, { id: 'ber', name: 'Berlin Mitte', city: 'Berlin' }, { id: 'muc', name: 'München Ost', city: 'München' }], sessions: {} };
-      d.locations.forEach(l => d.sessions[l.id] = this.fresh());
-      localStorage.setItem(this.KEY, JSON.stringify(d));
-    }
-    return d;
+  clock() { return Date.now() + this.off; }
+  api(path, body) {
+    const opt = body === undefined ? { cache: 'no-store' } : { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) };
+    return fetch(location.origin + '/api' + path, opt).then(r => r.json().catch(() => ({})).then(d => {
+      if (d.state) this.apply(d.state);
+      if (!r.ok) { const e = new Error(d.error || 'Serverfehler (' + r.status + ')'); e.status = r.status; throw e; }
+      return d;
+    }));
   }
-  update(fn) {
-    const d = this.loadDB(); const s = d.sessions[this.state.loc];
-    if (s) { fn(s); localStorage.setItem(this.KEY, JSON.stringify(d)); }
-    this.setState({ now: Date.now() });
+  apply(st) { this.db = st; this.off = st.serverNow - Date.now(); this.netErr = false; this.sync(this.state.loc); }
+  poll() {
+    if (!this.cols.length) this.api('/puzzle').then(p => { this.cols = p.cols; this.rows = p.rows; this.setState({ now: this.clock() }); }).catch(() => {});
+    this.api('/state').then(st => this.apply(st)).catch(() => { this.netErr = true; this.setState({ now: this.clock() }); });
   }
-  advance(to) { this.update(s => { s.stage = to; s.stageAt[to - 1] = Date.now(); }); }
+  // Wurde die Session vom Betreuer zurückgesetzt (neue sid), startet das Terminal frisch.
+  sync(loc) {
+    const s = this.db && this.db.sessions[loc];
+    const sid = s ? s.sid : null;
+    if (sid === this.state.sid) return this.setState({ now: this.clock() });
+    clearInterval(this.trainT);
+    const w = this.loadWork(sid);
+    this.setState({ sid, name: '', pw: '', loginErr: '', busy: false, roles: w.roles || {}, removed: w.removed || {}, tab: w.tab || 0, hintSeen: w.hintSeen || 0, tp: 0, training: false, run: null, result: null, modDone: 0, now: this.clock() });
+  }
+
+  // Arbeitsstand (Auswahl, gestrichene Zeilen, Tab) übersteht ein Neuladen der Seite.
+  loadWork(sid) {
+    try {
+      Object.keys(localStorage).filter(k => k.startsWith('mlEscape.work.') && k !== 'mlEscape.work.' + sid).forEach(k => localStorage.removeItem(k));
+      return (sid && JSON.parse(localStorage.getItem('mlEscape.work.' + sid))) || {};
+    } catch (e) { return {}; }
+  }
+  setWork(fn) {
+    if (!this.state.sid) return;
+    this.setState(st => {
+      const patch = fn(st), next = Object.assign({}, st, patch);
+      try { localStorage.setItem('mlEscape.work.' + st.sid, JSON.stringify({ roles: next.roles, removed: next.removed, tab: next.tab, hintSeen: next.hintSeen })); } catch (e) {}
+      return patch;
+    });
+  }
+  token() {
+    try {
+      const t = JSON.parse(localStorage.getItem('mlEscape.token.' + this.state.loc));
+      return t && t.sid === this.state.sid ? t.token : null;
+    } catch (e) { return null; }
+  }
+  playerErr(e) { if (e.status === 401) localStorage.removeItem('mlEscape.token.' + this.state.loc); this.setState({ now: this.clock() }); }
+
   remaining(s, now) { if (!s) return 0; return Math.max(0, s.duration - s.elapsed - (s.status === 'running' ? now - s.startedAt : 0)); }
   fmt(ms) { const t = Math.ceil(ms / 1000); return String(Math.floor(t / 60)).padStart(2, '0') + ':' + String(t % 60).padStart(2, '0'); }
 
@@ -330,93 +325,92 @@ class Component extends DCLogic {
     const q = new URLSearchParams(window.location.search).get('loc');
     if (q) localStorage.setItem('mlEscape.terminal', q);
     this.setState({ loc: q || localStorage.getItem('mlEscape.terminal') });
-    this.tick = setInterval(() => this.onTick(), 250);
+    this.poll();
+    this.tick = setInterval(() => this.setState({ now: this.clock() }), 250);
+    this.pollT = setInterval(() => this.poll(), 1000);
   }
-  componentWillUnmount() { clearInterval(this.tick); clearInterval(this.trainT); }
-  onTick() {
-    const s = this.loadDB().sessions[this.state.loc];
-    if (s && this.state.sid && s.sid !== this.state.sid) {
-      clearInterval(this.trainT);
-      this.setState({ sid: s.sid, name: '', pw: '', loginErr: '', roles: {}, removed: {}, tp: 0, training: false, run: null, result: null, modDone: 0, hintSeen: 0, tab: 0, now: Date.now() });
-    } else this.setState({ sid: s ? s.sid : null, now: Date.now() });
-  }
+  componentWillUnmount() { clearInterval(this.tick); clearInterval(this.pollT); clearInterval(this.trainT); }
 
   doLogin() {
-    const pw = this.props.password ?? 'onboarding';
+    if (this.state.busy) return;
     if (!this.state.name.trim()) return this.setState({ loginErr: 'Bitte gebt einen Namen ein.' });
-    if (this.state.pw.trim().toLowerCase() !== String(pw).toLowerCase()) return this.setState({ loginErr: 'Zugangsdaten ungültig.' });
-    const name = this.state.name.trim();
-    this.update(s => { s.team = name; s.stage = 1; s.stageAt[0] = Date.now(); });
+    const loc = this.state.loc;
+    this.setState({ busy: true });
+    this.api('/terminal/' + loc + '/login', { name: this.state.name, password: this.state.pw })
+      .then(d => { localStorage.setItem('mlEscape.token.' + loc, JSON.stringify({ sid: d.sid, token: d.token })); this.setState({ busy: false, pw: '', loginErr: '' }); })
+      .catch(e => this.setState({ busy: false, loginErr: e.message }));
   }
-  diagnose() {
-    const role = c => this.state.roles[c.key] || 'ign';
-    const targets = this.COLS.filter(c => role(c) === 'target');
-    const leak = this.COLS.some(c => c.rel === 'leak' && role(c) === 'feat');
-    const extra = this.COLS.filter(c => role(c) === 'feat' && c.rel === 'ign').length;
-    const missing = this.COLS.filter(c => c.rel === 'feat' && role(c) !== 'feat').length;
-    const rm = this.state.removed;
-    const { left, wrong } = this.cleanCheck(rm);
-    const out = [];
-    if (targets.length === 0) out.push('Das Modell weiß nicht, was es vorhersagen soll – es fehlt eine Zielvariable.');
-    else if (targets.length === 1 && targets[0].rel !== 'target') out.push('Das Modell sagt etwas vorher, das für die Frage „Fällt die Maschine aus?“ nicht hilft.');
-    if (leak) out.push('Im Training fast 100 %, im Test unbrauchbar: Das Modell nutzt eine Information, die vor einem Ausfall noch gar nicht bekannt ist.');
-    if (extra) out.push(extra === 1 ? 'Ein Merkmal ohne Zusammenhang zum Ausfall verwirrt das Modell.' : extra + ' Merkmale ohne Zusammenhang zum Ausfall verwirren das Modell.');
-    if (missing) out.push(missing === 1 ? 'Dem Modell fehlt ein wichtiger Sensorwert.' : 'Dem Modell fehlen ' + missing + ' wichtige Sensorwerte.');
-    if (left) out.push(left === 1 ? 'Eine unbrauchbare Messreihe verzerrt das Training.' : left + ' unbrauchbare Messreihen verzerren das Training.');
-    if (wrong) out.push(wrong === 1 ? 'Eine korrekte Messreihe wurde gestrichen – dem Modell fehlen Beispiele.' : wrong + ' korrekte Messreihen wurden gestrichen – dem Modell fehlen Beispiele.');
-    return out;
+  doCode() {
+    if (this.state.busy) return;
+    this.setState({ busy: true });
+    this.api('/terminal/' + this.state.loc + '/code', { token: this.token() })
+      .then(() => this.setState({ busy: false }))
+      .catch(e => { this.setState({ busy: false }); this.playerErr(e); });
   }
+  // Die Diagnose kommt vom Server; die Animation läuft danach lokal.
   train() {
     if (this.state.training) return;
     clearInterval(this.trainT);
-    const issues = this.diagnose();
-    const ok = !issues.length;
-    const acc = ok ? 96 : Math.max(47, 84 - issues.length * 8 - (this.cleanCheck(this.state.removed).left ? 5 : 0));
-    this.setState({ training: true, tp: 0, modDone: 0, result: null, run: { ok, acc, issues } });
+    this.setState({ training: true, tp: 0, modDone: 0, result: null, run: null });
+    this.api('/terminal/' + this.state.loc + '/train', { token: this.token(), roles: this.state.roles, removed: this.state.removed })
+      .then(d => this.animate(d.result))
+      .catch(e => { this.setState({ training: false }); this.playerErr(e); });
+  }
+  animate(run) {
+    this.setState({ run });
     const t0 = Date.now(), T = 3600, M = this.MODULES.length;
     this.trainT = setInterval(() => {
       const el = Date.now() - t0, tp = Math.min(1, el / T);
       if (tp < 1) return this.setState({ tp });
-      if (!ok) {
+      if (!run.ok) {
         clearInterval(this.trainT);
-        this.setState({ tp: 1, training: false, result: this.state.run });
-        return this.update(s => { s.fails = (s.fails || 0) + 1; });
+        return this.setState({ tp: 1, training: false, result: run });
       }
       const modDone = Math.min(M, Math.floor((el - T) / 550) + 1);
-      this.setState({ tp: 1, training: false, result: this.state.run, modDone, finishing: true });
+      this.setState({ tp: 1, training: false, result: run, modDone });
       if (modDone >= M && el > T + M * 550 + 900) {
         clearInterval(this.trainT);
-        this.update(s => { if (s.status === 'running') s.elapsed += Date.now() - s.startedAt; s.status = 'finished'; s.stage = 3; s.stageAt[2] = Date.now(); });
+        // Schlägt das fehl, schließt der Server die Session nach kurzer Zeit selbst ab.
+        this.api('/terminal/' + this.state.loc + '/finish', { token: this.token() }).catch(() => {});
       }
     }, 40);
   }
 
   renderVals() {
-    const db = this.loadDB(); const now = this.state.now;
+    const db = this.db || { locations: [], sessions: {} }; const now = this.state.now;
     const loc = db.locations.find(l => l.id === this.state.loc);
     const s = loc ? db.sessions[loc.id] : null;
     const rem = this.remaining(s, now);
     const status = s ? s.status : 'idle', stage = s ? s.stage : 0;
     const timeUp = status === 'running' && rem <= 0;
     let view = 'setup';
-    if (loc) {
+    if (!this.db) view = this.netErr ? 'offline' : 'loading';
+    else if (loc) {
       if (status === 'finished') view = 'done';
       else if (status === 'idle') view = 'wait';
       else if (timeUp) view = 'timeup';
       else if (status === 'paused') view = 'paused';
+      else if (stage >= 1 && stage < 3 && !this.token()) view = 'login';
       else view = ['login', 'code', 'ml', 'done'][stage] || 'login';
     }
-    const info = { wait: ['SYSTEM BEREIT', 'Warte auf Freigabe', 'Euer Betreuer startet gleich die Session. Sobald die Zeit läuft, meldet ihr euch hier an.'], paused: ['PAUSIERT', 'Die Zeit ist angehalten', 'Euer Betreuer hat die Session pausiert. Es geht gleich weiter.'], timeup: ['ZEIT ABGELAUFEN', 'Die Zeit ist um.', 'Bitte wendet euch an euren Betreuer.'] }[view];
+    const info = {
+      loading: ['VERBINDUNG', 'Terminal wird verbunden …', 'Einen Moment bitte.'],
+      offline: ['KEINE VERBINDUNG', 'Server nicht erreichbar', 'Es wird automatisch erneut versucht. Bitte wendet euch an euren Betreuer, falls das so bleibt.'],
+      wait: ['SYSTEM BEREIT', 'Warte auf Freigabe', 'Euer Betreuer startet gleich die Session. Sobald die Zeit läuft, meldet ihr euch hier an.'],
+      paused: ['PAUSIERT', 'Die Zeit ist angehalten', 'Euer Betreuer hat die Session pausiert. Es geht gleich weiter.'],
+      timeup: ['ZEIT ABGELAUFEN', 'Die Zeit ist um.', 'Bitte wendet euch an euren Betreuer.']
+    }[view];
     const muted = 'var(--color-neutral-600)', acc = 'var(--color-accent)', ink = 'var(--color-text)';
-    const locked = this.state.training || !!(this.state.result && this.state.result.ok);
+    const locked = this.state.training || !!(this.state.result && this.state.result.ok) || !!(s && s.solved);
+    const COLS = this.cols, ROWS = this.rows;
 
     const roles = this.state.roles;
-    const setRole = (key, role) => () => { if (locked) return; this.setState(st => {
+    const setRole = (key, role) => () => { if (locked) return; this.setWork(st => {
       const r = Object.assign({}, st.roles);
       if (role === 'target') Object.keys(r).forEach(k => { if (r[k] === 'target') r[k] = 'ign'; });
       r[key] = role; return { roles: r };
     }); };
-    const cols = this.COLS.map(c => {
+    const cols = COLS.map(c => {
       const role = roles[c.key] || 'ign';
       return {
         label: c.label, desc: c.desc,
@@ -428,17 +422,17 @@ class Component extends DCLogic {
         }))
       };
     });
-    const nf = this.COLS.filter(c => roles[c.key] === 'feat').length, nt = this.COLS.filter(c => roles[c.key] === 'target').length;
+    const nf = COLS.filter(c => roles[c.key] === 'feat').length, nt = COLS.filter(c => roles[c.key] === 'target').length;
 
     const rm = this.state.removed;
     const fmtv = v => typeof v === 'number' ? v.toLocaleString('de-DE') : v === '' ? '—' : v;
-    const shown = this.COLS.map((c, i) => i).filter(i => (roles[this.COLS[i].key] || 'ign') !== 'ign');
-    const cleanRows = this.ROWS.map((r, ri) => ({
+    const shown = COLS.map((c, i) => i).filter(i => (roles[COLS[i].key] || 'ign') !== 'ign');
+    const cleanRows = ROWS.map((r, ri) => ({
       n: String(ri + 1).padStart(2, '0'),
       cells: shown.map(i => fmtv(r[i])),
       bg: rm[ri] ? 'var(--color-neutral-200)' : 'transparent', color: rm[ri] ? 'var(--color-neutral-500)' : ink, deco: rm[ri] ? 'line-through' : 'none',
       act: rm[ri] ? 'Wiederherstellen' : 'Streichen', actColor: rm[ri] ? 'var(--color-accent-700)' : 'var(--color-neutral-500)',
-      toggle: () => { if (!locked) this.setState(st => ({ removed: Object.assign({}, st.removed, { [ri]: !st.removed[ri] }) })); }
+      toggle: () => { if (!locked) this.setWork(st => ({ removed: Object.assign({}, st.removed, { [ri]: !st.removed[ri] }) })); }
     }));
     const nRm = Object.values(rm).filter(Boolean).length;
 
@@ -454,6 +448,7 @@ class Component extends DCLogic {
     const modules = this.MODULES.map(([label, verdict], i) => ({ label, state: i < md ? verdict : i === md ? 'PRÜFT …' : 'WARTET', sc: i < md ? acc : muted, color: i < md ? ink : 'var(--color-neutral-700)' }));
 
     const hint = s && s.hint;
+    const cfg = window.ESCAPE_CONFIG;
     return {
       locName: loc ? loc.name : 'kein Standort',
       timer: this.fmt(status === 'finished' ? s.elapsed : rem),
@@ -461,36 +456,36 @@ class Component extends DCLogic {
       timerColor: status === 'running' && rem < 300000 ? 'var(--color-accent-700)' : status === 'running' || status === 'finished' ? ink : muted,
       showHint: !!(hint && hint.t > this.state.hintSeen && view !== 'done'),
       hintText: hint ? hint.text : '',
-      dismissHint: () => this.setState({ hintSeen: hint ? hint.t : 0 }),
+      dismissHint: () => this.setWork(() => ({ hintSeen: hint ? hint.t : 0 })),
       vSetup: view === 'setup', vInfo: !!info, infoKicker: info ? info[0] : '', infoTitle: info ? info[1] : '', infoText: info ? info[2] : '',
       vLogin: view === 'login', vCode: view === 'code', vML: view === 'ml', vDone: view === 'done',
-      setupLocs: db.locations.map(l => ({ name: l.name, city: l.city, pick: () => { localStorage.setItem('mlEscape.terminal', l.id); this.setState({ loc: l.id, sid: null }); } })),
+      setupLocs: db.locations.map(l => ({ name: l.name, city: l.city, pick: () => { localStorage.setItem('mlEscape.terminal', l.id); this.setState({ loc: l.id }); this.sync(l.id); } })),
       name: this.state.name, pw: this.state.pw, loginErr: this.state.loginErr,
       onName: e => this.setState({ name: e.target.value, loginErr: '' }),
       onPw: e => this.setState({ pw: e.target.value, loginErr: '' }),
       onPwKey: e => { if (e.key === 'Enter') this.doLogin(); },
       doLogin: () => this.doLogin(),
-      doCode: () => this.advance(2),
-      tabs: ['Daten auswählen', 'Messreihen prüfen', 'Modell trainieren'].map((label, i) => ({ letter: 'ABC'[i], label, go: () => this.setState({ tab: i }), sep: i ? '1px solid var(--color-divider)' : 'none', bg: this.state.tab === i ? 'var(--color-accent-900)' : 'transparent', fg: this.state.tab === i ? 'var(--color-bg)' : 'var(--color-neutral-700)' })),
-      goA: () => this.setState({ tab: 0 }),
+      doCode: () => this.doCode(),
+      tabs: ['Daten auswählen', 'Messreihen prüfen', 'Modell trainieren'].map((label, i) => ({ letter: 'ABC'[i], label, go: () => this.setWork(() => ({ tab: i })), sep: i ? '1px solid var(--color-divider)' : 'none', bg: this.state.tab === i ? 'var(--color-accent-900)' : 'transparent', fg: this.state.tab === i ? 'var(--color-bg)' : 'var(--color-neutral-700)' })),
+      goA: () => this.setWork(() => ({ tab: 0 })),
       tabA: this.state.tab === 0, tabB: this.state.tab === 1, tabC: this.state.tab === 2,
       hasPrev: this.state.tab > 0, hasNext: this.state.tab < 2,
       prevLabel: ['', 'Daten auswählen', 'Messreihen prüfen'][this.state.tab], nextLabel: ['Messreihen prüfen', 'Modell trainieren', ''][this.state.tab],
-      prevTab: () => this.setState(st => ({ tab: Math.max(0, st.tab - 1) })), nextTab: () => this.setState(st => ({ tab: Math.min(2, st.tab + 1) })),
+      prevTab: () => this.setWork(st => ({ tab: Math.max(0, st.tab - 1) })), nextTab: () => this.setWork(st => ({ tab: Math.min(2, st.tab + 1) })),
       cols, selSummary: nf + ' Merkmale · ' + nt + ' Ziel ausgewählt',
-      cleanHead: shown.map(i => ({ label: this.COLS[i].label + (roles[this.COLS[i].key] === 'target' ? ' · Ziel' : ''), range: this.COLS[i].range || '' })), hasCols: shown.length > 0, noCols: !shown.length, cleanRows,
-      cleanSummary: nRm + ' von ' + this.ROWS.length + ' Messreihen gestrichen',
+      cleanHead: shown.map(i => ({ label: COLS[i].label + (roles[COLS[i].key] === 'target' ? ' · Ziel' : ''), range: COLS[i].range || '' })), hasCols: shown.length > 0, noCols: !shown.length, cleanRows,
+      cleanSummary: nRm + ' von ' + ROWS.length + ' Messreihen gestrichen',
       epoch: String(run ? upto : 0), lossPts: pts.join(' '),
       accText: liveAcc != null ? liveAcc + ' %' : '–',
       train: () => this.train(), trainDisabled: locked,
-      trainLabel: this.state.training ? 'Training läuft …' : res && res.ok ? 'Modell übernommen' : res ? 'Erneut trainieren' : 'Training starten',
+      trainLabel: this.state.training ? 'Training läuft …' : (res && res.ok) || (s && s.solved) ? 'Modell übernommen' : res ? 'Erneut trainieren' : 'Training starten',
       resIdle: !res, idleText: this.state.training ? 'Das Modell lernt aus euren Daten …' : 'Noch kein Training gestartet. Das Ergebnis erscheint hier.',
       resFail: !!(res && !res.ok), resOk: !!(res && res.ok),
       resHeadline: res ? 'Genauigkeit ' + res.acc + ' % – benötigt werden 90 %.' : '',
       resIssues: res ? res.issues : [], modules,
       usedTime: s ? this.fmt(s.elapsed) : '',
-      showNav: this.props.showProtoNav ?? true,
-      changeTerminal: () => { localStorage.removeItem('mlEscape.terminal'); this.setState({ loc: null, sid: null }); }
+      showNav: (this.props.showProtoNav ?? true) && (cfg ? cfg.protoNav : true),
+      changeTerminal: () => { localStorage.removeItem('mlEscape.terminal'); this.setState({ loc: null }); this.sync(null); }
     };
   }
 }

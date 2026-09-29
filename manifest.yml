@@ -1,0 +1,24 @@
+# Deployment auf SAP BTP Cloud Foundry:  cf push
+# Passwörter einmalig setzen (danach: cf restage escape-room):
+#   cf set-env escape-room ADMIN_PASSWORD <passwort>
+#   cf set-env escape-room BETREUER_PASSWORD <passwort>
+# Dauerhafte Speicherung (sonst gehen angelegte Standorte und laufende Sessions bei
+# Restart/Restage verloren):
+#   cf create-service postgresql-db trial escape-room-db
+#   und unten "services" einkommentieren
+applications:
+  - name: escape-room
+    memory: 256M
+    disk_quota: 512M
+    instances: 1 # Zustand liegt im Speicher der App – nicht horizontal skalieren
+    buildpacks:
+      - nodejs_buildpack
+    command: npm start
+    health-check-type: http
+    health-check-http-endpoint: /health
+    env:
+      NODE_ENV: production
+      # PLAYER_PASSWORD: onboarding
+      # SHOW_PROTO_NAV: "false"
+    # services:
+    #   - escape-room-db
