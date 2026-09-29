@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/industry-8ef56458-4fb0-41eb-a4c0-4aa8fbd88bf5/styles.css">
+<style>body{margin:0}a{color:var(--color-accent-700)}a:hover{color:var(--color-accent-900)}input::placeholder{color:var(--color-neutral-500)}</style>
+</helmet>
+<div style="min-height:100vh;background:var(--color-bg);color:var(--color-text);font-family:var(--font-body)">
+  <header style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:14px 28px;border-bottom:1px solid var(--color-divider)">
+    <span style="font-family:var(--font-heading);font-weight:600;font-size:20px;letter-spacing:0.02em">Escape Room · Superadmin</span>
+    <span style="font-size:14px;font-variant-numeric:tabular-nums;color:var(--color-neutral-700)">{{ clock }}</span>
+  </header>
+  <main style="max-width:1080px;margin:0 auto;padding:36px 28px 90px;display:flex;flex-direction:column;gap:28px;box-sizing:border-box">
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap">
+      <div style="display:flex;flex-direction:column;gap:2px">
+        <span style="font-size:11px;letter-spacing:0.12em;color:var(--color-accent-700)">STANDORTVERWALTUNG</span>
+        <h1 style="margin:0;font-size:38px">Standorte</h1>
+      </div>
+      <div style="display:flex;align-items:baseline;gap:8px"><span style="font-family:var(--font-heading);font-weight:600;font-size:40px;line-height:1">{{ count }}</span><span style="font-size:15px;color:var(--color-neutral-700)">von 8 · {{ running }} aktiv</span></div>
+    </div>
+
+    <section class="blueprint" style="display:flex;flex-direction:column;gap:14px;padding:20px">
+      <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+      <span style="font-size:11px;letter-spacing:0.12em;color:var(--color-neutral-700)">NEUER STANDORT</span>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end">
+        <div class="field" style="flex:2 1 220px"><label>Bezeichnung</label><input class="input" value="{{ name }}" onChange="{{ onName }}" placeholder="z.B. Köln Zentrum" style="min-height:42px;font-size:15px"></div>
+        <div class="field" style="flex:1 1 160px"><label>Stadt</label><input class="input" value="{{ city }}" onChange="{{ onCity }}" onKeyDown="{{ onKey }}" placeholder="Köln" style="min-height:42px;font-size:15px"></div>
+        <button class="btn btn-primary" onClick="{{ add }}" disabled="{{ full }}" style="min-height:42px;padding:0 24px;font-size:16px">Hinzufügen</button>
+      </div>
+      <sc-if value="{{ err }}" hint-placeholder-val="{{ false }}"><span style="font-size:14px;font-weight:500">✕ {{ err }}</span></sc-if>
+    </section>
+
+    <section style="border:1px solid var(--color-divider);overflow-x:auto">
+      <table class="table" style="font-size:15px">
+        <thead>
+          <tr>
+            <th style="padding:12px 16px">Standort</th>
+            <th style="padding:12px 16px">Status</th>
+            <th style="padding:12px 16px">Team</th>
+            <th style="padding:12px 16px">Stufe</th>
+            <th style="padding:12px 16px;text-align:right">Zeit</th>
+            <th style="padding:12px 16px"></th>
+          </tr>
+        </thead>
+        <tbody>
+          <sc-for list="{{ rows }}" as="r" hint-placeholder-count="3">
+            <tr>
+              <td style="padding:14px 16px"><div style="display:flex;flex-direction:column;gap:1px"><span style="font-family:var(--font-heading);font-weight:600;font-size:17px">{{ r.name }}</span><span style="font-size:12px;color:var(--color-neutral-600)">{{ r.city }} · {{ r.id }}</span></div></td>
+              <td style="padding:14px 16px;font-weight:{{ r.fw }};color:{{ r.sc }}">{{ r.status }}</td>
+              <td style="padding:14px 16px">{{ r.team }}</td>
+              <td style="padding:14px 16px">{{ r.stage }}</td>
+              <td style="padding:14px 16px;text-align:right;font-family:var(--font-heading);font-weight:600;font-size:18px;font-variant-numeric:tabular-nums">{{ r.time }}</td>
+              <td style="padding:14px 16px">
+                <div style="display:flex;gap:12px;justify-content:flex-end;align-items:center">
+                  <a href="{{ r.monitorUrl }}" style="font-size:14px;text-decoration:none;white-space:nowrap">Monitoring</a>
+                  <a href="{{ r.terminalUrl }}" target="_blank" style="font-size:14px;text-decoration:none;white-space:nowrap">Terminal ↗</a>
+                  <button class="btn" onClick="{{ r.del }}" style="font-size:13px;white-space:nowrap;background:{{ r.delBg }};color:{{ r.delColor }};border-color:{{ r.delBorder }}">{{ r.delLabel }}</button>
+                </div>
+              </td>
+            </tr>
+          </sc-for>
+        </tbody>
+      </table>
+      <sc-if value="{{ empty }}" hint-placeholder-val="{{ false }}"><p style="margin:0;padding:24px 16px;color:var(--color-neutral-700)">Noch keine Standorte angelegt.</p></sc-if>
+    </section>
+  </main>
+  <sc-if value="{{ showNav }}" hint-placeholder-val="{{ true }}">
+    <nav style="position:fixed;right:16px;bottom:16px;display:flex;gap:2px;padding:4px;background:var(--color-bg);border:1px solid var(--color-divider);box-shadow:var(--shadow-md);font-size:13px">
+      <span style="padding:6px 10px;color:var(--color-neutral-500)">Prototyp</span>
+      <a href="Spieler.dc.html" style="padding:6px 10px;text-decoration:none">Spieler</a>
+      <a href="Betreuer.dc.html" style="padding:6px 10px;text-decoration:none">Betreuer</a>
+      <a href="Superadmin.dc.html" style="padding:6px 10px;text-decoration:none">Superadmin</a>
+    </nav>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;showProtoNav&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;}}">
+class Component extends DCLogic {
+  KEY = 'mlEscape.v4';
+  MAX = 8;
+  STAGES = ['Login', 'Programmierung', 'KI-Training', 'Geschafft'];
+  state = { now: Date.now(), name: '', city: '', err: '', confirm: null };
+
+  fresh() { return { sid: Math.random().toString(36).slice(2), team: '', status: 'idle', startedAt: null, elapsed: 0, duration: 1800000, stage: 0, stageAt: [], hint: null, fails: 0 }; }
+  loadDB() {
+    let d = null;
+    try { d = JSON.parse(localStorage.getItem(this.KEY)); } catch (e) {}
+    if (!d || !d.locations) {
+      d = { locations: [{ id: 'wdf', name: 'Walldorf Campus', city: 'Walldorf' }, { id: 'ber', name: 'Berlin Mitte', city: 'Berlin' }, { id: 'muc', name: 'München Ost', city: 'München' }], sessions: {} };
+      d.locations.forEach(l => d.sessions[l.id] = this.fresh());
+      localStorage.setItem(this.KEY, JSON.stringify(d));
+    }
+    return d;
+  }
+  save(d) { localStorage.setItem(this.KEY, JSON.stringify(d)); this.setState({ now: Date.now() }); }
+  remaining(s, now) { if (!s) return 0; return Math.max(0, s.duration - s.elapsed - (s.status === 'running' ? now - s.startedAt : 0)); }
+  fmt(ms) { const t = Math.ceil(ms / 1000); return String(Math.floor(t / 60)).padStart(2, '0') + ':' + String(t % 60).padStart(2, '0'); }
+  componentDidMount() { this.tick = setInterval(() => this.setState({ now: Date.now() }), 500); }
+  componentWillUnmount() { clearInterval(this.tick); clearTimeout(this.ct); }
+
+  add() {
+    const d = this.loadDB();
+    const name = this.state.name.trim(), city = this.state.city.trim();
+    if (d.locations.length >= this.MAX) return this.setState({ err: 'Maximal 8 Standorte möglich. Bitte zuerst einen löschen.' });
+    if (!name || !city) return this.setState({ err: 'Bitte Bezeichnung und Stadt angeben.' });
+    if (d.locations.some(l => l.name.toLowerCase() === name.toLowerCase())) return this.setState({ err: 'Dieser Standort existiert bereits.' });
+    const base = city.toLowerCase().normalize('NFD').replace(/[^a-z]/g, '').slice(0, 3) || 'loc';
+    let id = base, i = 2;
+    while (d.locations.some(l => l.id === id)) id = base + i++;
+    d.locations.push({ id, name, city });
+    d.sessions[id] = this.fresh();
+    this.setState({ name: '', city: '', err: '' });
+    this.save(d);
+  }
+  del(id) {
+    if (this.state.confirm !== id) {
+      this.setState({ confirm: id }); clearTimeout(this.ct);
+      this.ct = setTimeout(() => this.setState({ confirm: null }), 3000); return;
+    }
+    const d = this.loadDB();
+    d.locations = d.locations.filter(l => l.id !== id); delete d.sessions[id];
+    this.setState({ confirm: null });
+    this.save(d);
+  }
+  renderVals() {
+    const db = this.loadDB(); const now = this.state.now;
+    const status = s => {
+      if (!s || s.status === 'idle') return 'Bereit';
+      if (s.status === 'finished') return 'Geschafft';
+      if (s.status === 'running' && this.remaining(s, now) <= 0) return 'Zeit abgelaufen';
+      if (s.status === 'paused') return 'Pausiert';
+      return 'Läuft';
+    };
+    return {
+      clock: new Date(now).toLocaleTimeString('de-DE'),
+      count: String(db.locations.length),
+      running: String(db.locations.filter(l => { const s = db.sessions[l.id]; return s && (s.status === 'running' || s.status === 'paused'); }).length),
+      name: this.state.name, city: this.state.city, err: this.state.err,
+      onName: e => this.setState({ name: e.target.value, err: '' }),
+      onCity: e => this.setState({ city: e.target.value, err: '' }),
+      onKey: e => { if (e.key === 'Enter') this.add(); },
+      add: () => this.add(), full: db.locations.length >= this.MAX,
+      empty: !db.locations.length,
+      rows: db.locations.map(l => {
+        const s = db.sessions[l.id]; const st = status(s); const c = this.state.confirm === l.id;
+        return {
+          id: l.id, name: l.name, city: l.city, status: st, fw: st === 'Bereit' ? 400 : 700,
+          sc: st === 'Bereit' ? 'var(--color-neutral-600)' : st === 'Zeit abgelaufen' ? 'var(--color-text)' : 'var(--color-accent-700)',
+          team: s && s.team ? s.team : '—', stage: s && s.status !== 'idle' ? this.STAGES[s.stage] : '—',
+          time: s && s.status === 'finished' ? this.fmt(s.elapsed) : this.fmt(this.remaining(s, now)),
+          monitorUrl: 'Betreuer.dc.html?loc=' + l.id, terminalUrl: 'Spieler.dc.html?loc=' + l.id,
+          del: () => this.del(l.id), delLabel: c ? 'Wirklich löschen?' : 'Löschen',
+          delBg: c ? 'var(--color-text)' : 'transparent', delColor: c ? 'var(--color-bg)' : 'var(--color-neutral-700)', delBorder: c ? 'var(--color-text)' : 'var(--color-divider)'
+        };
+      }),
+      showNav: this.props.showProtoNav ?? true
+    };
+  }
+}
+</script>
+</body>
+</html>

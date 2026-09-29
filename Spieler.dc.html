@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/industry-8ef56458-4fb0-41eb-a4c0-4aa8fbd88bf5/styles.css">
+<style>body{margin:0}a{color:var(--color-accent-700)}a:hover{color:var(--color-accent-900)}input::placeholder{color:var(--color-neutral-500)}</style>
+</helmet>
+<div style="min-height:100vh;background:var(--color-bg);color:var(--color-text);font-family:var(--font-body);display:flex;flex-direction:column">
+  <header style="position:sticky;top:0;z-index:5;display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap;padding:12px 28px;background:var(--color-bg);border-bottom:1px solid var(--color-divider)">
+    <div style="display:flex;flex-direction:column;gap:0">
+      <span style="font-family:var(--font-heading);font-weight:600;font-size:20px;letter-spacing:0.02em">SAP Onboarding-Portal</span>
+      <span style="font-size:12px;color:var(--color-neutral-700)">Terminal · {{ locName }}</span>
+    </div>
+    <div class="blueprint" style="display:flex;align-items:baseline;gap:12px;padding:6px 14px">
+      <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+      <span style="font-size:11px;letter-spacing:0.12em;color:var(--color-neutral-700)">{{ timerLabel }}</span>
+      <span style="font-family:var(--font-heading);font-weight:600;font-size:34px;line-height:1;font-variant-numeric:tabular-nums;color:{{ timerColor }}">{{ timer }}</span>
+    </div>
+  </header>
+
+  <sc-if value="{{ showHint }}" hint-placeholder-val="{{ false }}">
+    <div style="display:flex;align-items:center;justify-content:center;gap:16px;flex-wrap:wrap;padding:12px 28px;background:var(--color-accent-900);color:var(--color-bg)">
+      <span style="font-size:11px;letter-spacing:0.12em;font-weight:700">HINWEIS VOM BETREUER</span>
+      <span style="font-size:16px">{{ hintText }}</span>
+      <button class="btn" onClick="{{ dismissHint }}" style="color:var(--color-bg);border-color:var(--color-accent-500)">Verstanden</button>
+    </div>
+  </sc-if>
+
+  <main style="flex:1;width:100%;max-width:1120px;margin:0 auto;padding:40px 28px 90px;box-sizing:border-box">
+
+    <sc-if value="{{ vSetup }}" hint-placeholder-val="{{ false }}">
+      <div style="max-width:520px;margin:40px auto;display:flex;flex-direction:column;gap:18px">
+        <span style="font-size:11px;letter-spacing:0.12em;color:var(--color-accent-700)">TERMINAL EINRICHTEN</span>
+        <h1 style="margin:0;font-size:38px;text-wrap:pretty">An welchem Standort steht dieses Terminal?</h1>
+        <p style="margin:0;color:var(--color-neutral-700)">Einmalig vom Betreuer festzulegen. Wird auf diesem Gerät gespeichert.</p>
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <sc-for list="{{ setupLocs }}" as="l" hint-placeholder-count="3">
+            <button class="btn btn-secondary" onClick="{{ l.pick }}" style="justify-content:space-between;padding:14px 16px;font-size:18px">
+              <span>{{ l.name }}</span><span style="font-family:var(--font-body);font-weight:400;font-size:14px;color:var(--color-neutral-700)">{{ l.city }}</span>
+            </button>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ vInfo }}" hint-placeholder-val="{{ false }}">
+      <div style="max-width:560px;margin:80px auto;display:flex;flex-direction:column;gap:16px;align-items:center;text-align:center">
+        <span style="font-size:11px;letter-spacing:0.12em;color:var(--color-accent-700)">{{ infoKicker }}</span>
+        <h1 style="margin:0;font-size:44px;text-wrap:pretty">{{ infoTitle }}</h1>
+        <p style="margin:0;font-size:17px;color:var(--color-neutral-700);text-wrap:pretty">{{ infoText }}</p>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ vLogin }}" hint-placeholder-val="{{ false }}">
+      <div class="blueprint" style="max-width:420px;margin:40px auto;display:flex;flex-direction:column;gap:20px;padding:32px">
+        <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <span style="font-size:11px;letter-spacing:0.12em;color:var(--color-accent-700)">ANMELDUNG</span>
+          <h1 style="margin:0;font-size:36px">Willkommen an Bord.</h1>
+          <p style="margin:0;color:var(--color-neutral-700)">Meldet euch mit euren Zugangsdaten für neue Mitarbeitende an.</p>
+        </div>
+        <div class="field"><label>Name</label><input class="input" value="{{ name }}" onChange="{{ onName }}" placeholder="Teamname" style="min-height:44px;font-size:16px"></div>
+        <div class="field"><label>Passwort</label><input class="input" type="password" value="{{ pw }}" onChange="{{ onPw }}" onKeyDown="{{ onPwKey }}" placeholder="••••••••" style="min-height:44px;font-size:16px"></div>
+        <sc-if value="{{ loginErr }}" hint-placeholder-val="{{ false }}"><span style="font-size:14px;font-weight:500">✕ {{ loginErr }}</span></sc-if>
+        <button class="btn btn-primary" onClick="{{ doLogin }}" style="min-height:44px;font-size:17px">Anmelden</button>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ vCode }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;flex-direction:column;gap:24px">
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <span style="font-size:11px;letter-spacing:0.12em;color:var(--color-accent-700)">PROGRAMMIERAUFGABE</span>
+          <h1 style="margin:0;font-size:38px">Programmieraufgabe</h1>
+        </div>
+        <div class="blueprint" style="min-height:360px;display:grid;place-items:center;background:repeating-linear-gradient(135deg,transparent 0 10px,var(--color-surface) 10px 20px)">
+          <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+          <span style="font-family:ui-monospace,monospace;font-size:13px;color:var(--color-neutral-700)">Platzhalter · Inhalt wird separat entwickelt</span>
+        </div>
+        <div style="display:flex;justify-content:flex-end">
+          <button class="btn btn-primary" onClick="{{ doCode }}" style="min-height:44px;padding:0 32px;font-size:17px">Weiter</button>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ vML }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;flex-direction:column;gap:28px">
+        <div style="display:flex;flex-direction:column;gap:8px;max-width:800px">
+          <span style="font-size:11px;letter-spacing:0.12em;color:var(--color-accent-700)">KI-TRAINING</span>
+          <h1 style="margin:0;font-size:42px;text-wrap:pretty">Wir brauchen eure Hilfe.</h1>
+          <p style="margin:0;font-size:16px;color:var(--color-neutral-800);text-wrap:pretty">In unserer Fertigung fallen ständig Maschinen aus – völlig unvorhergesehen. Jeder Stillstand kostet Zeit und Geld. Wir brauchen eine KI, die anhand der Sensordaten einschätzt, welche Maschine bald ausfällt. Bereitet die Daten auf und trainiert das Modell. Wir setzen es nur ein, wenn es mindestens 90 % der Fälle richtig einschätzt.</p>
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border:1px solid var(--color-divider)">
+          <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="3">
+            <button onClick="{{ t.go }}" style="display:flex;align-items:baseline;gap:10px;padding:14px 16px;border:none;border-left:{{ t.sep }};background:{{ t.bg }};color:{{ t.fg }};cursor:pointer;text-align:left">
+              <span style="font-family:var(--font-heading);font-weight:600;font-size:22px">{{ t.letter }}</span>
+              <span style="font-family:var(--font-heading);font-weight:600;font-size:18px">{{ t.label }}</span>
+            </button>
+          </sc-for>
+        </div>
+        <sc-if value="{{ tabA }}" hint-placeholder-val="{{ true }}"><section style="display:flex;flex-direction:column;gap:18px">
+          <div style="display:flex;align-items:baseline;gap:14px;flex-wrap:wrap">
+            <span style="font-family:var(--font-heading);font-weight:600;font-size:28px;color:var(--color-accent)">A</span>
+            <h2 style="margin:0;font-size:28px">Daten auswählen</h2>
+            <span style="font-size:15px;color:var(--color-neutral-700)">Welche Spalten helfen bei der Vorhersage – und was soll vorhergesagt werden?</span>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:16px">
+            <sc-for list="{{ cols }}" as="c" hint-placeholder-count="10">
+              <div class="blueprint" style="display:flex;flex-direction:column;gap:12px;padding:16px;border-color:{{ c.border }}">
+                <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+                <div style="display:flex;flex-direction:column;gap:3px;flex:1">
+                  <span style="font-family:var(--font-heading);font-weight:600;font-size:19px">{{ c.label }}</span>
+                  <span style="font-size:13px;color:var(--color-neutral-700)">{{ c.desc }}</span>
+                </div>
+                <div style="display:grid;grid-template-columns:repeat(3,1fr);border:1px solid var(--color-divider)">
+                  <sc-for list="{{ c.opts }}" as="o" hint-placeholder-count="3">
+                    <button onClick="{{ o.onClick }}" style="padding:9px 4px;border:none;border-left:{{ o.sep }};background:{{ o.bg }};color:{{ o.fg }};font:500 13px var(--font-body);cursor:pointer">{{ o.label }}</button>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+          <span style="font-size:14px;color:var(--color-neutral-700)">{{ selSummary }}</span>
+        </section></sc-if>
+
+        
+        <sc-if value="{{ tabB }}" hint-placeholder-val="{{ false }}"><section style="display:flex;flex-direction:column;gap:18px">
+          <div style="display:flex;align-items:baseline;gap:14px;flex-wrap:wrap">
+            <span style="font-family:var(--font-heading);font-weight:600;font-size:28px;color:var(--color-accent)">B</span>
+            <h2 style="margin:0;font-size:28px">Messreihen prüfen</h2>
+            <span style="font-size:15px;color:var(--color-neutral-700)">Eure Auswahl aus A. Streicht Messreihen, die das Training verfälschen – durch unrealistische Werte, fehlende Werte oder doppelte Einträge. Die möglichen Wertebereiche stehen im Tabellenkopf. Klickt auf eine Zeile, um sie zu streichen.</span>
+          </div>
+          <sc-if value="{{ noCols }}" hint-placeholder-val="{{ false }}">
+            <div class="blueprint" style="padding:28px;display:flex;flex-direction:column;gap:12px;align-items:flex-start">
+              <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+              <span style="font-size:15px;color:var(--color-neutral-700)">Noch keine Spalten ausgewählt. Hier erscheinen nur die Spalten, die ihr in A als Merkmal oder Ziel übernommen habt.</span>
+              <button class="btn btn-secondary" onClick="{{ goA }}" style="font-size:15px">← Zu Daten auswählen</button>
+            </div>
+          </sc-if>
+          <sc-if value="{{ hasCols }}" hint-placeholder-val="{{ true }}">
+          <div style="overflow-x:auto;border:1px solid var(--color-divider)">
+            <table style="width:100%;border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums">
+              <thead>
+                <tr>
+                  <th style="padding:10px 12px;text-align:left;font-size:11px;letter-spacing:0.08em;color:var(--color-neutral-600);border-bottom:1px solid var(--color-divider)">#</th>
+                  <sc-for list="{{ cleanHead }}" as="h" hint-placeholder-count="10">
+                    <th style="padding:10px 12px;text-align:left;vertical-align:bottom;border-bottom:1px solid var(--color-divider)">
+                      <div style="display:flex;flex-direction:column;gap:1px"><span style="font-family:var(--font-heading);font-weight:600;font-size:15px;white-space:nowrap">{{ h.label }}</span><span style="font-weight:400;font-size:11px;white-space:nowrap;color:var(--color-accent-700)">{{ h.range }}</span></div>
+                    </th>
+                  </sc-for>
+                  <th style="border-bottom:1px solid var(--color-divider)"></th>
+                </tr>
+              </thead>
+              <tbody>
+                <sc-for list="{{ cleanRows }}" as="r" hint-placeholder-count="15">
+                  <tr onClick="{{ r.toggle }}" style="cursor:pointer;background:{{ r.bg }};color:{{ r.color }}" style-hover="background:var(--color-accent-100)">
+                    <td style="padding:9px 12px;color:var(--color-neutral-500);border-bottom:1px solid var(--color-divider)">{{ r.n }}</td>
+                    <sc-for list="{{ r.cells }}" as="cell" hint-placeholder-count="10">
+                      <td style="padding:9px 12px;white-space:nowrap;border-bottom:1px solid var(--color-divider);text-decoration:{{ r.deco }}">{{ cell }}</td>
+                    </sc-for>
+                    <td style="padding:9px 12px;text-align:right;font-size:13px;white-space:nowrap;border-bottom:1px solid var(--color-divider);color:{{ r.actColor }}">{{ r.act }}</td>
+                  </tr>
+                </sc-for>
+              </tbody>
+            </table>
+          </div>
+          </sc-if>
+          <span style="font-size:14px;color:var(--color-neutral-700)">{{ cleanSummary }}</span>
+        </section></sc-if>
+
+        
+        <sc-if value="{{ tabC }}" hint-placeholder-val="{{ false }}"><section style="display:flex;flex-direction:column;gap:18px">
+          <div style="display:flex;align-items:baseline;gap:14px;flex-wrap:wrap">
+            <span style="font-family:var(--font-heading);font-weight:600;font-size:28px;color:var(--color-accent)">C</span>
+            <h2 style="margin:0;font-size:28px">Modell trainieren</h2>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:24px;align-items:stretch">
+            <div class="blueprint" style="display:flex;flex-direction:column;gap:14px;padding:20px">
+              <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+              <div style="display:flex;justify-content:space-between;gap:12px"><span style="font-size:11px;letter-spacing:0.12em;color:var(--color-neutral-700)">FEHLER PRO EPOCHE</span><span style="font-size:13px;font-variant-numeric:tabular-nums;color:var(--color-neutral-700)">Epoche {{ epoch }} / 50</span></div>
+              <svg viewBox="0 0 400 170" style="width:100%;height:auto;display:block">
+                <line x1="0" y1="160" x2="400" y2="160" stroke="var(--color-neutral-400)" stroke-width="1"></line>
+                <line x1="0" y1="90" x2="400" y2="90" stroke="var(--color-neutral-300)" stroke-width="1" stroke-dasharray="3 4"></line>
+                <line x1="0" y1="20" x2="400" y2="20" stroke="var(--color-neutral-300)" stroke-width="1" stroke-dasharray="3 4"></line>
+                <polyline points="{{ lossPts }}" fill="none" stroke="var(--color-accent)" stroke-width="2"></polyline>
+              </svg>
+              <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px">
+                <span style="font-size:14px;color:var(--color-neutral-700)">Genauigkeit auf Testdaten · Ziel 90 %</span>
+                <span style="font-family:var(--font-heading);font-weight:600;font-size:48px;line-height:1;font-variant-numeric:tabular-nums">{{ accText }}</span>
+              </div>
+              <button class="btn btn-primary" onClick="{{ train }}" disabled="{{ trainDisabled }}" style="min-height:44px;font-size:17px">{{ trainLabel }}</button>
+            </div>
+
+            <div class="blueprint" style="display:flex;flex-direction:column;gap:12px;padding:20px">
+              <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+              <sc-if value="{{ resIdle }}" hint-placeholder-val="{{ true }}">
+                <div style="display:flex;flex-direction:column;gap:8px">
+                  <span style="font-size:11px;letter-spacing:0.12em;color:var(--color-neutral-700)">TRAININGSBERICHT</span>
+                  <span style="font-size:15px;color:var(--color-neutral-700)">{{ idleText }}</span>
+                </div>
+              </sc-if>
+              <sc-if value="{{ resFail }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;flex-direction:column;gap:12px">
+                  <span style="align-self:flex-start;padding:3px 10px;font-size:11px;letter-spacing:0.1em;font-weight:700;background:var(--color-text);color:var(--color-bg)">TRAINING FEHLGESCHLAGEN</span>
+                  <span style="font-family:var(--font-heading);font-weight:600;font-size:22px;line-height:1.2">{{ resHeadline }}</span>
+                  <span style="font-size:11px;letter-spacing:0.12em;color:var(--color-neutral-700)">DIAGNOSE</span>
+                  <sc-for list="{{ resIssues }}" as="iss" hint-placeholder-count="2">
+                    <div style="display:flex;gap:10px;padding:9px 0;border-top:1px solid var(--color-divider);font-size:15px"><span style="color:var(--color-accent-700);font-weight:700">→</span><span>{{ iss }}</span></div>
+                  </sc-for>
+                  <span style="font-size:13px;color:var(--color-neutral-700)">Passt Auswahl und Messreihen an und trainiert erneut.</span>
+                </div>
+              </sc-if>
+              <sc-if value="{{ resOk }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;flex-direction:column;gap:4px">
+                  <span style="padding-bottom:8px;font-size:11px;letter-spacing:0.12em;color:var(--color-neutral-700)">MODELL IM EINSATZ · LIVE-EINSCHÄTZUNG DER MASCHINEN</span>
+                  <sc-for list="{{ modules }}" as="m" hint-placeholder-count="6">
+                    <div style="display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid var(--color-divider);font-size:15px">
+                      <span style="color:{{ m.color }}">{{ m.label }}</span>
+                      <span style="font-size:12px;letter-spacing:0.08em;font-weight:700;color:{{ m.sc }}">{{ m.state }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+              </sc-if>
+            </div>
+          </div>
+        </section></sc-if>
+        <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap">
+          <sc-if value="{{ hasPrev }}" hint-placeholder-val="{{ false }}"><button class="btn btn-secondary" onClick="{{ prevTab }}" style="min-height:44px;padding:0 24px;font-size:16px">← {{ prevLabel }}</button></sc-if>
+          <span></span>
+          <sc-if value="{{ hasNext }}" hint-placeholder-val="{{ true }}"><button class="btn btn-primary" onClick="{{ nextTab }}" style="min-height:44px;padding:0 24px;font-size:16px">{{ nextLabel }} →</button></sc-if>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ vDone }}" hint-placeholder-val="{{ false }}">
+      <div style="max-width:640px;margin:48px auto;display:flex;flex-direction:column;gap:20px;align-items:center;text-align:center">
+        <span style="font-size:11px;letter-spacing:0.12em;color:var(--color-accent-700)">ESCAPE ROOM GESCHAFFT</span>
+        <h1 style="margin:0;font-size:56px;text-wrap:pretty">Onboarding abgeschlossen.</h1>
+        <p style="margin:0;font-size:18px;color:var(--color-neutral-800);text-wrap:pretty">Eure KI erkennt Maschinenausfälle, bevor sie passieren. Damit habt ihr euer Onboarding bestanden – willkommen im Team.</p>
+        <div class="blueprint" style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:18px 40px;margin-top:8px">
+          <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+          <span style="font-size:11px;letter-spacing:0.12em;color:var(--color-neutral-700)">BENÖTIGTE ZEIT</span>
+          <span style="font-family:var(--font-heading);font-weight:600;font-size:48px;line-height:1;font-variant-numeric:tabular-nums">{{ usedTime }}</span>
+        </div>
+      </div>
+    </sc-if>
+  </main>
+
+  <sc-if value="{{ showNav }}" hint-placeholder-val="{{ true }}">
+    <nav style="position:fixed;right:16px;bottom:16px;display:flex;gap:2px;padding:4px;background:var(--color-bg);border:1px solid var(--color-divider);box-shadow:var(--shadow-md);font-size:13px">
+      <span style="padding:6px 10px;color:var(--color-neutral-500)">Prototyp</span>
+      <a href="Spieler.dc.html" style="padding:6px 10px;text-decoration:none">Spieler</a>
+      <a href="Betreuer.dc.html" style="padding:6px 10px;text-decoration:none">Betreuer</a>
+      <a href="Superadmin.dc.html" style="padding:6px 10px;text-decoration:none">Superadmin</a>
+      <button onClick="{{ changeTerminal }}" style="padding:6px 10px;border:none;background:none;color:var(--color-neutral-700);font:inherit;cursor:pointer">Terminal ändern</button>
+    </nav>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;password&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;onboarding&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;showProtoNav&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;}}">
+class Component extends DCLogic {
+  KEY = 'mlEscape.v4';
+  COLS = [
+    { key: 'id', label: 'Sensor-ID', desc: 'Kennung des Messgeräts', rel: 'ign' },
+    { key: 'maschine', label: 'Maschine', desc: 'Bezeichnung in der Halle', rel: 'ign' },
+    { key: 'farbe', label: 'Gehäusefarbe', desc: 'Lackierung der Maschine', rel: 'ign' },
+    { key: 'techniker', label: 'Techniker:in', desc: 'Zuständig für die letzte Prüfung', rel: 'ign' },
+    { key: 'temp', label: 'Temperatur', desc: 'Lagertemperatur in °C', range: '20 – 120 °C', rel: 'feat' },
+    { key: 'vib', label: 'Vibration', desc: 'Schwinggeschwindigkeit in mm/s', range: '0 – 25 mm/s', rel: 'feat' },
+    { key: 'rpm', label: 'Drehzahl', desc: 'Umdrehungen pro Minute', range: '500 – 3.000 U/min', rel: 'feat' },
+    { key: 'std', label: 'Betriebsstunden', desc: 'Seit der letzten Wartung', range: '0 – 5.000 h', rel: 'feat' },
+    { key: 'kosten', label: 'Reparaturkosten', desc: 'In € – nach dem Ausfall erfasst', range: '€', rel: 'leak' },
+    { key: 'ausfall', label: 'Ausfall in 24 h', desc: 'Ist die Maschine ausgefallen? Ja / Nein', range: 'Ja / Nein', rel: 'target' }
+  ];
+  ROWS = [
+    ['S-201','Presse 1','Grau','M. Weber',64,3.1,1450,820,0,'Nein'],
+    ['S-202','Fräse 2','Blau','J. Koch',98,14.2,2780,4310,4200,'Ja'],
+    ['S-203','Presse 3','Grau','A. Yilmaz',71,4.0,1520,1250,0,'Nein'],
+    ['S-204','Drehbank 1','Grün','M. Weber',9999,5.2,1600,900,0,'Nein'],
+    ['S-205','Fräse 1','Blau','L. Braun',105,18.7,2900,4780,5100,'Ja'],
+    ['S-206','Presse 2','Grau','J. Koch',58,-4.0,1380,300,0,'Nein'],
+    ['S-207','Drehbank 2','Grün','A. Yilmaz',88,11.5,2400,3600,3800,'Ja'],
+    ['S-208','Fräse 3','Blau','L. Braun',67,3.8,'',1100,0,'Nein'],
+    ['S-202','Fräse 2','Blau','J. Koch',98,14.2,2780,4310,4200,'Ja'],
+    ['S-209','Presse 4','Grau','M. Weber',62,2.9,1410,640,0,'Nein'],
+    ['S-210','Drehbank 3','Grün','J. Koch',76,6.1,310000,1900,0,'Nein'],
+    ['S-211','Fräse 4','Blau','A. Yilmaz',101,16.3,2850,4550,4700,'Ja'],
+    ['S-212','Presse 5','Grau','L. Braun',69,4.4,1500,72000,0,'Nein'],
+    ['S-213','Drehbank 4','Grün','M. Weber',55,2.2,1300,420,0,'Nein'],
+    ['S-214','Fräse 5','Blau','J. Koch',94,13.8,2700,4020,3900,'Ja']
+  ];
+  BAD = [3, 5, 7, 10, 12];
+  DUP = [1, 8];
+  cleanCheck(rm) {
+    const dupRm = this.DUP.filter(i => rm[i]).length;
+    const left = this.BAD.filter(i => !rm[i]).length + (dupRm === 0 ? 1 : 0);
+    const wrong = Object.keys(rm).filter(k => rm[k] && !this.BAD.includes(+k) && !this.DUP.includes(+k)).length + (dupRm === 2 ? 1 : 0);
+    return { left, wrong };
+  }
+  MODULES = [['Presse 1 · Halle A', 'STABIL'], ['Fräse 2 · Halle A', 'AUSFALLRISIKO · WARTUNG GEPLANT'], ['Drehbank 1 · Halle B', 'STABIL'], ['Fräse 4 · Halle B', 'AUSFALLRISIKO · WARTUNG GEPLANT'], ['Presse 5 · Halle C', 'STABIL'], ['Drehbank 4 · Halle C', 'STABIL']];
+  state = { now: Date.now(), loc: null, sid: null, name: '', pw: '', loginErr: '', roles: {}, removed: {}, tp: 0, training: false, run: null, result: null, modDone: 0, hintSeen: 0, tab: 0 };
+
+  fresh() { return { sid: Math.random().toString(36).slice(2), team: '', status: 'idle', startedAt: null, elapsed: 0, duration: 1800000, stage: 0, stageAt: [], hint: null, fails: 0 }; }
+  loadDB() {
+    let d = null;
+    try { d = JSON.parse(localStorage.getItem(this.KEY)); } catch (e) {}
+    if (!d || !d.locations) {
+      d = { locations: [{ id: 'wdf', name: 'Walldorf Campus', city: 'Walldorf' }, { id: 'ber', name: 'Berlin Mitte', city: 'Berlin' }, { id: 'muc', name: 'München Ost', city: 'München' }], sessions: {} };
+      d.locations.forEach(l => d.sessions[l.id] = this.fresh());
+      localStorage.setItem(this.KEY, JSON.stringify(d));
+    }
+    return d;
+  }
+  update(fn) {
+    const d = this.loadDB(); const s = d.sessions[this.state.loc];
+    if (s) { fn(s); localStorage.setItem(this.KEY, JSON.stringify(d)); }
+    this.setState({ now: Date.now() });
+  }
+  advance(to) { this.update(s => { s.stage = to; s.stageAt[to - 1] = Date.now(); }); }
+  remaining(s, now) { if (!s) return 0; return Math.max(0, s.duration - s.elapsed - (s.status === 'running' ? now - s.startedAt : 0)); }
+  fmt(ms) { const t = Math.ceil(ms / 1000); return String(Math.floor(t / 60)).padStart(2, '0') + ':' + String(t % 60).padStart(2, '0'); }
+
+  componentDidMount() {
+    const q = new URLSearchParams(window.location.search).get('loc');
+    if (q) localStorage.setItem('mlEscape.terminal', q);
+    this.setState({ loc: q || localStorage.getItem('mlEscape.terminal') });
+    this.tick = setInterval(() => this.onTick(), 250);
+  }
+  componentWillUnmount() { clearInterval(this.tick); clearInterval(this.trainT); }
+  onTick() {
+    const s = this.loadDB().sessions[this.state.loc];
+    if (s && this.state.sid && s.sid !== this.state.sid) {
+      clearInterval(this.trainT);
+      this.setState({ sid: s.sid, name: '', pw: '', loginErr: '', roles: {}, removed: {}, tp: 0, training: false, run: null, result: null, modDone: 0, hintSeen: 0, tab: 0, now: Date.now() });
+    } else this.setState({ sid: s ? s.sid : null, now: Date.now() });
+  }
+
+  doLogin() {
+    const pw = this.props.password ?? 'onboarding';
+    if (!this.state.name.trim()) return this.setState({ loginErr: 'Bitte gebt einen Namen ein.' });
+    if (this.state.pw.trim().toLowerCase() !== String(pw).toLowerCase()) return this.setState({ loginErr: 'Zugangsdaten ungültig.' });
+    const name = this.state.name.trim();
+    this.update(s => { s.team = name; s.stage = 1; s.stageAt[0] = Date.now(); });
+  }
+  diagnose() {
+    const role = c => this.state.roles[c.key] || 'ign';
+    const targets = this.COLS.filter(c => role(c) === 'target');
+    const leak = this.COLS.some(c => c.rel === 'leak' && role(c) === 'feat');
+    const extra = this.COLS.filter(c => role(c) === 'feat' && c.rel === 'ign').length;
+    const missing = this.COLS.filter(c => c.rel === 'feat' && role(c) !== 'feat').length;
+    const rm = this.state.removed;
+    const { left, wrong } = this.cleanCheck(rm);
+    const out = [];
+    if (targets.length === 0) out.push('Das Modell weiß nicht, was es vorhersagen soll – es fehlt eine Zielvariable.');
+    else if (targets.length === 1 && targets[0].rel !== 'target') out.push('Das Modell sagt etwas vorher, das für die Frage „Fällt die Maschine aus?“ nicht hilft.');
+    if (leak) out.push('Im Training fast 100 %, im Test unbrauchbar: Das Modell nutzt eine Information, die vor einem Ausfall noch gar nicht bekannt ist.');
+    if (extra) out.push(extra === 1 ? 'Ein Merkmal ohne Zusammenhang zum Ausfall verwirrt das Modell.' : extra + ' Merkmale ohne Zusammenhang zum Ausfall verwirren das Modell.');
+    if (missing) out.push(missing === 1 ? 'Dem Modell fehlt ein wichtiger Sensorwert.' : 'Dem Modell fehlen ' + missing + ' wichtige Sensorwerte.');
+    if (left) out.push(left === 1 ? 'Eine unbrauchbare Messreihe verzerrt das Training.' : left + ' unbrauchbare Messreihen verzerren das Training.');
+    if (wrong) out.push(wrong === 1 ? 'Eine korrekte Messreihe wurde gestrichen – dem Modell fehlen Beispiele.' : wrong + ' korrekte Messreihen wurden gestrichen – dem Modell fehlen Beispiele.');
+    return out;
+  }
+  train() {
+    if (this.state.training) return;
+    clearInterval(this.trainT);
+    const issues = this.diagnose();
+    const ok = !issues.length;
+    const acc = ok ? 96 : Math.max(47, 84 - issues.length * 8 - (this.cleanCheck(this.state.removed).left ? 5 : 0));
+    this.setState({ training: true, tp: 0, modDone: 0, result: null, run: { ok, acc, issues } });
+    const t0 = Date.now(), T = 3600, M = this.MODULES.length;
+    this.trainT = setInterval(() => {
+      const el = Date.now() - t0, tp = Math.min(1, el / T);
+      if (tp < 1) return this.setState({ tp });
+      if (!ok) {
+        clearInterval(this.trainT);
+        this.setState({ tp: 1, training: false, result: this.state.run });
+        return this.update(s => { s.fails = (s.fails || 0) + 1; });
+      }
+      const modDone = Math.min(M, Math.floor((el - T) / 550) + 1);
+      this.setState({ tp: 1, training: false, result: this.state.run, modDone, finishing: true });
+      if (modDone >= M && el > T + M * 550 + 900) {
+        clearInterval(this.trainT);
+        this.update(s => { if (s.status === 'running') s.elapsed += Date.now() - s.startedAt; s.status = 'finished'; s.stage = 3; s.stageAt[2] = Date.now(); });
+      }
+    }, 40);
+  }
+
+  renderVals() {
+    const db = this.loadDB(); const now = this.state.now;
+    const loc = db.locations.find(l => l.id === this.state.loc);
+    const s = loc ? db.sessions[loc.id] : null;
+    const rem = this.remaining(s, now);
+    const status = s ? s.status : 'idle', stage = s ? s.stage : 0;
+    const timeUp = status === 'running' && rem <= 0;
+    let view = 'setup';
+    if (loc) {
+      if (status === 'finished') view = 'done';
+      else if (status === 'idle') view = 'wait';
+      else if (timeUp) view = 'timeup';
+      else if (status === 'paused') view = 'paused';
+      else view = ['login', 'code', 'ml', 'done'][stage] || 'login';
+    }
+    const info = { wait: ['SYSTEM BEREIT', 'Warte auf Freigabe', 'Euer Betreuer startet gleich die Session. Sobald die Zeit läuft, meldet ihr euch hier an.'], paused: ['PAUSIERT', 'Die Zeit ist angehalten', 'Euer Betreuer hat die Session pausiert. Es geht gleich weiter.'], timeup: ['ZEIT ABGELAUFEN', 'Die Zeit ist um.', 'Bitte wendet euch an euren Betreuer.'] }[view];
+    const muted = 'var(--color-neutral-600)', acc = 'var(--color-accent)', ink = 'var(--color-text)';
+    const locked = this.state.training || !!(this.state.result && this.state.result.ok);
+
+    const roles = this.state.roles;
+    const setRole = (key, role) => () => { if (locked) return; this.setState(st => {
+      const r = Object.assign({}, st.roles);
+      if (role === 'target') Object.keys(r).forEach(k => { if (r[k] === 'target') r[k] = 'ign'; });
+      r[key] = role; return { roles: r };
+    }); };
+    const cols = this.COLS.map(c => {
+      const role = roles[c.key] || 'ign';
+      return {
+        label: c.label, desc: c.desc,
+        border: role === 'ign' ? 'var(--color-divider)' : acc,
+        opts: [['ign', 'Ignorieren'], ['feat', 'Merkmal'], ['target', 'Ziel']].map(([k, l], oi) => ({
+          label: l, onClick: setRole(c.key, k), sep: oi ? '1px solid var(--color-divider)' : 'none',
+          bg: role === k ? (k === 'ign' ? 'var(--color-neutral-200)' : k === 'feat' ? acc : 'var(--color-accent-900)') : 'transparent',
+          fg: role === k && k !== 'ign' ? 'var(--color-bg)' : role === k ? ink : 'var(--color-neutral-700)'
+        }))
+      };
+    });
+    const nf = this.COLS.filter(c => roles[c.key] === 'feat').length, nt = this.COLS.filter(c => roles[c.key] === 'target').length;
+
+    const rm = this.state.removed;
+    const fmtv = v => typeof v === 'number' ? v.toLocaleString('de-DE') : v === '' ? '—' : v;
+    const shown = this.COLS.map((c, i) => i).filter(i => (roles[this.COLS[i].key] || 'ign') !== 'ign');
+    const cleanRows = this.ROWS.map((r, ri) => ({
+      n: String(ri + 1).padStart(2, '0'),
+      cells: shown.map(i => fmtv(r[i])),
+      bg: rm[ri] ? 'var(--color-neutral-200)' : 'transparent', color: rm[ri] ? 'var(--color-neutral-500)' : ink, deco: rm[ri] ? 'line-through' : 'none',
+      act: rm[ri] ? 'Wiederherstellen' : 'Streichen', actColor: rm[ri] ? 'var(--color-accent-700)' : 'var(--color-neutral-500)',
+      toggle: () => { if (!locked) this.setState(st => ({ removed: Object.assign({}, st.removed, { [ri]: !st.removed[ri] }) })); }
+    }));
+    const nRm = Object.values(rm).filter(Boolean).length;
+
+    const run = this.state.run, tp = this.state.tp, N = 50, upto = Math.round(N * tp), pts = [];
+    if (run) for (let i = 0; i <= upto; i++) {
+      const x = i / N;
+      const v = run.ok ? 0.86 * Math.exp(-4.2 * x) + 0.08 + 0.025 * Math.sin(i * 1.7) * (1 - x) : 0.5 * Math.exp(-3 * x) + 0.4 + 0.07 * Math.sin(i * 2.3) + 0.04 * Math.sin(i * 5.1);
+      pts.push((x * 400).toFixed(1) + ',' + (160 - Math.max(0, Math.min(1, v)) * 140).toFixed(1));
+    }
+    const liveAcc = run ? Math.round(50 + (run.acc - 50) * (1 - Math.exp(-4 * tp)) / (1 - Math.exp(-4))) : null;
+    const res = this.state.result;
+    const md = this.state.modDone;
+    const modules = this.MODULES.map(([label, verdict], i) => ({ label, state: i < md ? verdict : i === md ? 'PRÜFT …' : 'WARTET', sc: i < md ? acc : muted, color: i < md ? ink : 'var(--color-neutral-700)' }));
+
+    const hint = s && s.hint;
+    return {
+      locName: loc ? loc.name : 'kein Standort',
+      timer: this.fmt(status === 'finished' ? s.elapsed : rem),
+      timerLabel: status === 'finished' ? 'BENÖTIGT' : status === 'paused' ? 'PAUSIERT' : 'RESTZEIT',
+      timerColor: status === 'running' && rem < 300000 ? 'var(--color-accent-700)' : status === 'running' || status === 'finished' ? ink : muted,
+      showHint: !!(hint && hint.t > this.state.hintSeen && view !== 'done'),
+      hintText: hint ? hint.text : '',
+      dismissHint: () => this.setState({ hintSeen: hint ? hint.t : 0 }),
+      vSetup: view === 'setup', vInfo: !!info, infoKicker: info ? info[0] : '', infoTitle: info ? info[1] : '', infoText: info ? info[2] : '',
+      vLogin: view === 'login', vCode: view === 'code', vML: view === 'ml', vDone: view === 'done',
+      setupLocs: db.locations.map(l => ({ name: l.name, city: l.city, pick: () => { localStorage.setItem('mlEscape.terminal', l.id); this.setState({ loc: l.id, sid: null }); } })),
+      name: this.state.name, pw: this.state.pw, loginErr: this.state.loginErr,
+      onName: e => this.setState({ name: e.target.value, loginErr: '' }),
+      onPw: e => this.setState({ pw: e.target.value, loginErr: '' }),
+      onPwKey: e => { if (e.key === 'Enter') this.doLogin(); },
+      doLogin: () => this.doLogin(),
+      doCode: () => this.advance(2),
+      tabs: ['Daten auswählen', 'Messreihen prüfen', 'Modell trainieren'].map((label, i) => ({ letter: 'ABC'[i], label, go: () => this.setState({ tab: i }), sep: i ? '1px solid var(--color-divider)' : 'none', bg: this.state.tab === i ? 'var(--color-accent-900)' : 'transparent', fg: this.state.tab === i ? 'var(--color-bg)' : 'var(--color-neutral-700)' })),
+      goA: () => this.setState({ tab: 0 }),
+      tabA: this.state.tab === 0, tabB: this.state.tab === 1, tabC: this.state.tab === 2,
+      hasPrev: this.state.tab > 0, hasNext: this.state.tab < 2,
+      prevLabel: ['', 'Daten auswählen', 'Messreihen prüfen'][this.state.tab], nextLabel: ['Messreihen prüfen', 'Modell trainieren', ''][this.state.tab],
+      prevTab: () => this.setState(st => ({ tab: Math.max(0, st.tab - 1) })), nextTab: () => this.setState(st => ({ tab: Math.min(2, st.tab + 1) })),
+      cols, selSummary: nf + ' Merkmale · ' + nt + ' Ziel ausgewählt',
+      cleanHead: shown.map(i => ({ label: this.COLS[i].label + (roles[this.COLS[i].key] === 'target' ? ' · Ziel' : ''), range: this.COLS[i].range || '' })), hasCols: shown.length > 0, noCols: !shown.length, cleanRows,
+      cleanSummary: nRm + ' von ' + this.ROWS.length + ' Messreihen gestrichen',
+      epoch: String(run ? upto : 0), lossPts: pts.join(' '),
+      accText: liveAcc != null ? liveAcc + ' %' : '–',
+      train: () => this.train(), trainDisabled: locked,
+      trainLabel: this.state.training ? 'Training läuft …' : res && res.ok ? 'Modell übernommen' : res ? 'Erneut trainieren' : 'Training starten',
+      resIdle: !res, idleText: this.state.training ? 'Das Modell lernt aus euren Daten …' : 'Noch kein Training gestartet. Das Ergebnis erscheint hier.',
+      resFail: !!(res && !res.ok), resOk: !!(res && res.ok),
+      resHeadline: res ? 'Genauigkeit ' + res.acc + ' % – benötigt werden 90 %.' : '',
+      resIssues: res ? res.issues : [], modules,
+      usedTime: s ? this.fmt(s.elapsed) : '',
+      showNav: this.props.showProtoNav ?? true,
+      changeTerminal: () => { localStorage.removeItem('mlEscape.terminal'); this.setState({ loc: null, sid: null }); }
+    };
+  }
+}
+</script>
+</body>
+</html>
