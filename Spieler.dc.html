@@ -16,7 +16,10 @@
   <header style="position:sticky;top:0;z-index:5;display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap;padding:12px 28px;background:var(--color-bg);border-bottom:1px solid var(--color-divider)">
     <div style="display:flex;flex-direction:column;gap:0">
       <span style="font-family:var(--font-heading);font-weight:600;font-size:20px;letter-spacing:0.02em">SAP Onboarding-Portal</span>
-      <span style="font-size:12px;color:var(--color-neutral-700)">Terminal · {{ locName }}</span>
+      <div style="display:flex;align-items:baseline;gap:10px">
+        <span style="font-size:12px;color:var(--color-neutral-700)">Terminal · {{ locName }}</span>
+        <sc-if value="{{ hasTerminal }}" hint-placeholder-val="{{ true }}"><button onClick="{{ openExit }}" style="padding:0;border:none;background:none;font:inherit;font-size:12px;color:var(--color-neutral-500);text-decoration:underline;cursor:pointer">Terminal abmelden</button></sc-if>
+      </div>
     </div>
     <div class="blueprint" style="display:flex;align-items:baseline;gap:12px;padding:6px 14px">
       <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
@@ -35,18 +38,55 @@
 
   <main style="flex:1;width:100%;max-width:1120px;margin:0 auto;padding:40px 28px 90px;box-sizing:border-box">
 
-    <sc-if value="{{ vSetup }}" hint-placeholder-val="{{ false }}">
+    <sc-if value="{{ vSetupLoc }}" hint-placeholder-val="{{ false }}">
       <div style="max-width:520px;margin:40px auto;display:flex;flex-direction:column;gap:18px">
-        <span style="font-size:11px;letter-spacing:0.12em;color:var(--color-accent-700)">TERMINAL EINRICHTEN</span>
-        <h1 style="margin:0;font-size:38px;text-wrap:pretty">An welchem Standort steht dieses Terminal?</h1>
-        <p style="margin:0;color:var(--color-neutral-700)">Einmalig vom Betreuer festzulegen. Wird auf diesem Gerät gespeichert.</p>
+        <span style="font-size:11px;letter-spacing:0.12em;color:var(--color-accent-700)">ANMELDUNG</span>
+        <h1 style="margin:0;font-size:38px;text-wrap:pretty">An welchem Standort seid ihr?</h1>
+        <p style="margin:0;color:var(--color-neutral-700)">Wählt zuerst den Standort – danach, ob ihr als Spieler oder als Betreuer weitermacht.</p>
         <div style="display:flex;flex-direction:column;gap:14px">
           <sc-for list="{{ setupLocs }}" as="l" hint-placeholder-count="3">
             <button class="btn btn-secondary" onClick="{{ l.pick }}" style="justify-content:space-between;padding:14px 16px;font-size:18px">
               <span>{{ l.name }}</span><span style="font-family:var(--font-body);font-weight:400;font-size:14px;color:var(--color-neutral-700)">{{ l.city }}</span>
             </button>
           </sc-for>
+          <sc-if value="{{ noLocs }}" hint-placeholder-val="{{ false }}"><span style="font-size:15px;color:var(--color-neutral-700)">Noch keine Standorte angelegt – bitte als Root anmelden.</span></sc-if>
         </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding-top:18px;border-top:1px solid var(--color-divider)">
+          <span style="font-size:14px;color:var(--color-neutral-700)">Standorte verwalten und alle Sessions überwachen</span>
+          <button class="btn btn-secondary" onClick="{{ pickRoot }}" style="min-height:40px;padding:0 18px;font-size:15px">Als Root anmelden</button>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ vSetupRole }}" hint-placeholder-val="{{ false }}">
+      <div style="max-width:520px;margin:40px auto;display:flex;flex-direction:column;gap:18px">
+        <span style="font-size:11px;letter-spacing:0.12em;color:var(--color-accent-700)">{{ pickKicker }}</span>
+        <h1 style="margin:0;font-size:38px;text-wrap:pretty">Wie meldet ihr euch an?</h1>
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <button class="btn btn-primary" onClick="{{ asPlayer }}" style="flex-direction:column;align-items:flex-start;gap:4px;padding:16px 18px;text-align:left">
+            <span style="font-size:20px">Als Spieler anmelden</span>
+            <span style="font-family:var(--font-body);font-weight:400;font-size:14px">Dieses Gerät wird zum Terminal für das Team.</span>
+          </button>
+          <button class="btn btn-secondary" onClick="{{ asBetreuer }}" style="flex-direction:column;align-items:flex-start;gap:4px;padding:16px 18px;text-align:left">
+            <span style="font-size:20px">Als Betreuer anmelden</span>
+            <span style="font-family:var(--font-body);font-weight:400;font-size:14px;color:var(--color-neutral-700)">Timer steuern, Fortschritt verfolgen, Hinweise senden.</span>
+          </button>
+        </div>
+        <button class="btn btn-ghost" onClick="{{ backToLocs }}" style="align-self:flex-start;font-size:15px">← Anderer Standort</button>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ vSetupPw }}" hint-placeholder-val="{{ false }}">
+      <div class="blueprint" style="max-width:420px;margin:40px auto;display:flex;flex-direction:column;gap:20px;padding:32px">
+        <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <span style="font-size:11px;letter-spacing:0.12em;color:var(--color-accent-700)">{{ pwKicker }}</span>
+          <h1 style="margin:0;font-size:36px">{{ pwTitle }}</h1>
+        </div>
+        <div class="field"><label>Passwort</label><input class="input" type="password" value="{{ authPw }}" onChange="{{ onAuthPw }}" onKeyDown="{{ onAuthKey }}" placeholder="••••••••" style="min-height:44px;font-size:16px"></div>
+        <sc-if value="{{ authErr }}" hint-placeholder-val="{{ false }}"><span style="font-size:14px;font-weight:500">✕ {{ authErr }}</span></sc-if>
+        <button class="btn btn-primary" onClick="{{ doAuth }}" style="min-height:44px;font-size:17px">Anmelden</button>
+        <button class="btn btn-ghost" onClick="{{ backFromPw }}" style="align-self:flex-start;font-size:15px">← Zurück</button>
       </div>
     </sc-if>
 
@@ -253,21 +293,27 @@
     </sc-if>
   </main>
 
-  <sc-if value="{{ showNav }}" hint-placeholder-val="{{ true }}">
-    <nav style="position:fixed;right:16px;bottom:16px;display:flex;gap:2px;padding:4px;background:var(--color-bg);border:1px solid var(--color-divider);box-shadow:var(--shadow-md);font-size:13px">
-      <span style="padding:6px 10px;color:var(--color-neutral-500)">Prototyp</span>
-      <a href="Spieler.dc.html" style="padding:6px 10px;text-decoration:none">Spieler</a>
-      <a href="Betreuer.dc.html" style="padding:6px 10px;text-decoration:none">Betreuer</a>
-      <a href="Superadmin.dc.html" style="padding:6px 10px;text-decoration:none">Superadmin</a>
-      <button onClick="{{ changeTerminal }}" style="padding:6px 10px;border:none;background:none;color:var(--color-neutral-700);font:inherit;cursor:pointer">Terminal ändern</button>
-    </nav>
+  <sc-if value="{{ showExit }}" hint-placeholder-val="{{ false }}">
+    <div class="dialog-backdrop" style="z-index:20">
+      <div class="dialog blueprint" style="background:var(--color-bg)">
+        <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+        <span class="dialog-title">Terminal abmelden</span>
+        <span class="dialog-body">Nur für Betreuer: Mit dem Betreuer-Passwort dieses Standorts (oder dem Root-Passwort) kehrt das Gerät zur Standortauswahl zurück. Die laufende Session bleibt erhalten.</span>
+        <div class="field"><label>Passwort</label><input class="input" type="password" value="{{ exitPw }}" onChange="{{ onExitPw }}" onKeyDown="{{ onExitKey }}" placeholder="••••••••" style="min-height:42px;font-size:15px"></div>
+        <sc-if value="{{ exitErr }}" hint-placeholder-val="{{ false }}"><span style="font-size:14px;font-weight:500">✕ {{ exitErr }}</span></sc-if>
+        <div class="dialog-actions">
+          <button class="btn btn-secondary" onClick="{{ closeExit }}">Abbrechen</button>
+          <button class="btn btn-primary" onClick="{{ doExit }}">Abmelden</button>
+        </div>
+      </div>
+    </div>
   </sc-if>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props="{&quot;showProtoNav&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;}}">
+<script type="text/x-dc" data-dc-script data-props="{}">
 class Component extends DCLogic {
   MODULES = [['Presse 1 · Halle A', 'STABIL'], ['Fräse 2 · Halle A', 'AUSFALLRISIKO · WARTUNG GEPLANT'], ['Drehbank 1 · Halle B', 'STABIL'], ['Fräse 4 · Halle B', 'AUSFALLRISIKO · WARTUNG GEPLANT'], ['Presse 5 · Halle C', 'STABIL'], ['Drehbank 4 · Halle C', 'STABIL']];
-  state = { now: Date.now(), loc: null, sid: null, name: '', pw: '', loginErr: '', busy: false, roles: {}, removed: {}, tp: 0, training: false, run: null, result: null, modDone: 0, hintSeen: 0, tab: 0 };
+  state = { now: Date.now(), loc: null, sid: null, name: '', pw: '', loginErr: '', busy: false, pick: null, setupStep: 'loc', authRole: null, authPw: '', authErr: '', exit: false, exitPw: '', exitErr: '', roles: {}, removed: {}, tp: 0, training: false, run: null, result: null, modDone: 0, hintSeen: 0, tab: 0 };
   // Serverzustand (per Polling), Uhrabgleich zum Server und Rätseldaten
   db = null; off = 0; netErr = false; cols = []; rows = [];
 
@@ -376,6 +422,37 @@ class Component extends DCLogic {
     }, 40);
   }
 
+  // Anmeldung als Betreuer (für den gewählten Standort) oder Root – danach Wechsel zur Konsole.
+  doAuth() {
+    if (this.state.busy) return;
+    const role = this.state.authRole;
+    this.setState({ busy: true });
+    this.api('/auth/login', { role, loc: this.state.pick, password: this.state.authPw })
+      .then(() => { window.location.href = role === 'root' ? 'Superadmin.dc.html' : 'Betreuer.dc.html'; })
+      .catch(e => this.setState({ busy: false, authErr: e.message }));
+  }
+  asPlayer() {
+    const id = this.state.pick;
+    localStorage.setItem('mlEscape.terminal', id);
+    this.setState({ loc: id, pick: null, setupStep: 'loc' });
+    this.sync(id);
+  }
+  // Nur Betreuer des Standorts oder Root können ein Terminal zur Standortauswahl zurücksetzen.
+  doExit() {
+    if (this.state.busy) return;
+    const loc = this.state.loc;
+    this.setState({ busy: true });
+    this.api('/auth/check', { loc, password: this.state.exitPw })
+      .then(() => {
+        localStorage.removeItem('mlEscape.terminal');
+        localStorage.removeItem('mlEscape.token.' + loc);
+        this.setState({ busy: false, loc: null, exit: false, exitPw: '', exitErr: '', pick: null, setupStep: 'loc' });
+        this.sync(null);
+        if (window.location.search) window.history.replaceState(null, '', window.location.pathname);
+      })
+      .catch(e => this.setState({ busy: false, exitErr: e.message }));
+  }
+
   renderVals() {
     const db = this.db || { locations: [], sessions: {} }; const now = this.state.now;
     const loc = db.locations.find(l => l.id === this.state.loc);
@@ -448,7 +525,9 @@ class Component extends DCLogic {
     const modules = this.MODULES.map(([label, verdict], i) => ({ label, state: i < md ? verdict : i === md ? 'PRÜFT …' : 'WARTET', sc: i < md ? acc : muted, color: i < md ? ink : 'var(--color-neutral-700)' }));
 
     const hint = s && s.hint;
-    const cfg = window.ESCAPE_CONFIG;
+    const pickLoc = db.locations.find(l => l.id === this.state.pick);
+    // Ohne (noch existierenden) gewählten Standort geht es nur als Root weiter.
+    const step = pickLoc || (this.state.setupStep === 'pw' && this.state.authRole === 'root') ? this.state.setupStep : 'loc';
     return {
       locName: loc ? loc.name : 'kein Standort',
       timer: this.fmt(status === 'finished' ? s.elapsed : rem),
@@ -457,9 +536,31 @@ class Component extends DCLogic {
       showHint: !!(hint && hint.t > this.state.hintSeen && view !== 'done'),
       hintText: hint ? hint.text : '',
       dismissHint: () => this.setWork(() => ({ hintSeen: hint ? hint.t : 0 })),
-      vSetup: view === 'setup', vInfo: !!info, infoKicker: info ? info[0] : '', infoTitle: info ? info[1] : '', infoText: info ? info[2] : '',
+      vSetupLoc: view === 'setup' && step === 'loc', vSetupRole: view === 'setup' && step === 'role', vSetupPw: view === 'setup' && step === 'pw',
+      noLocs: !!this.db && !db.locations.length,
+      pickKicker: 'STANDORT · ' + (pickLoc ? pickLoc.name.toUpperCase() : ''),
+      pickRoot: () => this.setState({ setupStep: 'pw', authRole: 'root', authPw: '', authErr: '' }),
+      asPlayer: () => this.asPlayer(),
+      asBetreuer: () => this.setState({ setupStep: 'pw', authRole: 'betreuer', authPw: '', authErr: '' }),
+      backToLocs: () => this.setState({ setupStep: 'loc', pick: null }),
+      pwKicker: this.state.authRole === 'root' ? 'ROOT' : 'BETREUER · ' + (pickLoc ? pickLoc.name.toUpperCase() : ''),
+      pwTitle: this.state.authRole === 'root' ? 'Als Root anmelden' : 'Als Betreuer anmelden',
+      authPw: this.state.authPw, authErr: this.state.authErr,
+      onAuthPw: e => this.setState({ authPw: e.target.value, authErr: '' }),
+      onAuthKey: e => { if (e.key === 'Enter') this.doAuth(); },
+      doAuth: () => this.doAuth(),
+      backFromPw: () => this.setState({ setupStep: this.state.authRole === 'root' ? 'loc' : 'role', authPw: '', authErr: '' }),
+      hasTerminal: !!loc,
+      showExit: this.state.exit && !!loc,
+      openExit: () => this.setState({ exit: true, exitPw: '', exitErr: '' }),
+      closeExit: () => this.setState({ exit: false }),
+      exitPw: this.state.exitPw, exitErr: this.state.exitErr,
+      onExitPw: e => this.setState({ exitPw: e.target.value, exitErr: '' }),
+      onExitKey: e => { if (e.key === 'Enter') this.doExit(); if (e.key === 'Escape') this.setState({ exit: false }); },
+      doExit: () => this.doExit(),
+      vInfo: !!info, infoKicker: info ? info[0] : '', infoTitle: info ? info[1] : '', infoText: info ? info[2] : '',
       vLogin: view === 'login', vCode: view === 'code', vML: view === 'ml', vDone: view === 'done',
-      setupLocs: db.locations.map(l => ({ name: l.name, city: l.city, pick: () => { localStorage.setItem('mlEscape.terminal', l.id); this.setState({ loc: l.id }); this.sync(l.id); } })),
+      setupLocs: db.locations.map(l => ({ name: l.name, city: l.city, pick: () => this.setState({ pick: l.id, setupStep: 'role' }) })),
       name: this.state.name, pw: this.state.pw, loginErr: this.state.loginErr,
       onName: e => this.setState({ name: e.target.value, loginErr: '' }),
       onPw: e => this.setState({ pw: e.target.value, loginErr: '' }),
@@ -483,9 +584,7 @@ class Component extends DCLogic {
       resFail: !!(res && !res.ok), resOk: !!(res && res.ok),
       resHeadline: res ? 'Genauigkeit ' + res.acc + ' % – benötigt werden 90 %.' : '',
       resIssues: res ? res.issues : [], modules,
-      usedTime: s ? this.fmt(s.elapsed) : '',
-      showNav: (this.props.showProtoNav ?? true) && (cfg ? cfg.protoNav : true),
-      changeTerminal: () => { localStorage.removeItem('mlEscape.terminal'); this.setState({ loc: null }); this.sync(null); }
+      usedTime: s ? this.fmt(s.elapsed) : ''
     };
   }
 }

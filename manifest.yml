@@ -1,7 +1,7 @@
 # Deployment auf SAP BTP Cloud Foundry:  cf push
 # Passwörter einmalig setzen (danach: cf restage escape-room):
-#   cf set-env escape-room ADMIN_PASSWORD <passwort>
-#   cf set-env escape-room BETREUER_PASSWORD <passwort>
+#   cf set-env escape-room ROOT_PASSWORD <passwort>
+#   cf set-env escape-room BETREUER_PASSWORD <passwort>   (Startpasswort der Standard-Standorte)
 # Dauerhafte Speicherung (sonst gehen angelegte Standorte und laufende Sessions bei
 # Restart/Restage verloren):
 #   cf create-service postgresql-db trial escape-room-db
@@ -19,6 +19,5 @@ applications:
     env:
       NODE_ENV: production
       # PLAYER_PASSWORD: onboarding
-      # SHOW_PROTO_NAV: "false"
     # services:
     #   - escape-room-db

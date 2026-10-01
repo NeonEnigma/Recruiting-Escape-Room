@@ -15,7 +15,12 @@
 <div style="min-height:100vh;background:var(--color-bg);color:var(--color-text);font-family:var(--font-body);display:flex;flex-direction:column">
   <header style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:14px 28px;border-bottom:1px solid var(--color-divider)">
     <span style="font-family:var(--font-heading);font-weight:600;font-size:20px;letter-spacing:0.02em">Escape Room · Betreuer-Konsole</span>
-    <span style="font-size:14px;font-variant-numeric:tabular-nums;color:var(--color-neutral-700)">{{ clock }}</span>
+    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+      <span style="font-size:14px;font-variant-numeric:tabular-nums;color:var(--color-neutral-700)">{{ clock }}</span>
+      <span style="font-size:14px;color:var(--color-neutral-700)">{{ whoLabel }}</span>
+      <sc-if value="{{ isRoot }}" hint-placeholder-val="{{ false }}"><a href="Superadmin.dc.html" style="font-size:14px;text-decoration:none">Standortverwaltung</a></sc-if>
+      <button class="btn btn-secondary" onClick="{{ logout }}" style="font-size:14px">Abmelden</button>
+    </div>
   </header>
   <div style="flex:1;display:flex;flex-wrap:wrap;align-items:stretch">
     <aside style="flex:1 1 240px;max-width:300px;display:flex;flex-direction:column;gap:8px;padding:20px 16px;border-right:1px solid var(--color-divider);box-sizing:border-box">
@@ -159,27 +164,20 @@
       </sc-if>
     </main>
   </div>
-  <sc-if value="{{ showNav }}" hint-placeholder-val="{{ true }}">
-    <nav style="position:fixed;right:16px;bottom:16px;display:flex;gap:2px;padding:4px;background:var(--color-bg);border:1px solid var(--color-divider);box-shadow:var(--shadow-md);font-size:13px">
-      <span style="padding:6px 10px;color:var(--color-neutral-500)">Prototyp</span>
-      <a href="Spieler.dc.html" style="padding:6px 10px;text-decoration:none">Spieler</a>
-      <a href="Betreuer.dc.html" style="padding:6px 10px;text-decoration:none">Betreuer</a>
-      <a href="Superadmin.dc.html" style="padding:6px 10px;text-decoration:none">Superadmin</a>
-    </nav>
-  </sc-if>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props="{&quot;showProtoNav&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;}}">
+<script type="text/x-dc" data-dc-script data-props="{}">
 class Component extends DCLogic {
   STAGES = ['Login', 'Programmieraufgabe', 'KI-Training', 'Escape Room geschafft'];
   state = { now: Date.now(), sel: null, hintText: '', confirmReset: false, err: '' };
   // Serverzustand (per Polling) und Uhrabgleich zum Server
-  db = null; off = 0; playerPassword = 'onboarding';
+  db = null; off = 0; playerPassword = 'onboarding'; who = null;
 
   clock() { return Date.now() + this.off; }
   api(path, body) {
     const opt = body === undefined ? { cache: 'no-store' } : { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) };
     return fetch(location.origin + '/api' + path, opt).then(r => r.json().catch(() => ({})).then(d => {
+      if (r.status === 401) { window.location.href = '/'; throw new Error('Bitte erneut anmelden.'); }
       if (d.state) this.apply(d.state);
       if (!r.ok) throw new Error(d.error || 'Serverfehler (' + r.status + ')');
       return d;
@@ -205,14 +203,17 @@ class Component extends DCLogic {
     const q = new URLSearchParams(window.location.search).get('loc');
     this.setState({ sel: q || localStorage.getItem('mlEscape.betreuerLoc') });
     this.poll();
-    this.api('/staff').then(d => { this.playerPassword = d.playerPassword; }).catch(() => {});
+    this.api('/staff').then(d => { this.playerPassword = d.playerPassword; this.who = d; this.setState({ now: this.clock() }); }).catch(() => {});
     this.tick = setInterval(() => this.setState({ now: this.clock() }), 250);
     this.pollT = setInterval(() => this.poll(), 1000);
   }
   componentWillUnmount() { clearInterval(this.tick); clearInterval(this.pollT); clearTimeout(this.rt); }
 
   renderVals() {
-    const db = this.db || { locations: [], sessions: {} }; const now = this.state.now;
+    const now = this.state.now, who = this.who;
+    // Betreuer sehen nur ihren eigenen Standort, Root alle.
+    const all = this.db && who ? this.db.locations : [];
+    const db = { locations: who && who.role === 'betreuer' ? all.filter(l => l.id === who.loc) : all, sessions: this.db ? this.db.sessions : {} };
     const loc = db.locations.find(l => l.id === this.state.sel) || db.locations[0];
     const id = loc && loc.id;
     const s = loc ? db.sessions[loc.id] : null;
@@ -226,7 +227,6 @@ class Component extends DCLogic {
       ['Messreihen', 'Vergleicht jeden Wert mit dem möglichen Bereich im Tabellenkopf. Und: Gibt es eine Sensor-ID zweimal?'],
       ['Allgemein', 'Ihr seid auf dem richtigen Weg – lest die Fehlermeldung genau.']
     ];
-    const cfg = window.ESCAPE_CONFIG;
     return {
       clock: new Date(now).toLocaleTimeString('de-DE'),
       err: this.state.err, hasErr: !!this.state.err,
@@ -240,7 +240,10 @@ class Component extends DCLogic {
           pick: () => { localStorage.setItem('mlEscape.betreuerLoc', l.id); this.setState({ sel: l.id, confirmReset: false }); }
         };
       }),
-      noLoc: !!this.db && !loc, hasLoc: !!loc,
+      noLoc: !!this.db && !!who && !loc,
+      whoLabel: !who ? '' : who.role === 'root' ? 'Angemeldet als Root' : 'Angemeldet als Betreuer',
+      isRoot: !!who && who.role === 'root',
+      logout: () => fetch(location.origin + '/api/auth/logout', { method: 'POST' }).finally(() => { window.location.href = '/'; }), hasLoc: !!loc,
       city: loc ? loc.city.toUpperCase() : '', locName: loc ? loc.name : '', team: s && s.team ? s.team : '—',
       terminalUrl: loc ? 'Spieler.dc.html?loc=' + loc.id : '#',
       statusLabel: label.toUpperCase(),
@@ -277,8 +280,7 @@ class Component extends DCLogic {
       playerPassword: this.playerPassword,
       showSolution: !!this.state.solution,
       solutionLabel: this.state.solution ? 'Lösung ausblenden' : 'Lösung anzeigen',
-      toggleSolution: () => this.setState(st => ({ solution: !st.solution })),
-      showNav: (this.props.showProtoNav ?? true) && (cfg ? cfg.protoNav : true)
+      toggleSolution: () => this.setState(st => ({ solution: !st.solution }))
     };
   }
 }

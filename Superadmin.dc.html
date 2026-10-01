@@ -15,7 +15,12 @@
 <div style="min-height:100vh;background:var(--color-bg);color:var(--color-text);font-family:var(--font-body)">
   <header style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:14px 28px;border-bottom:1px solid var(--color-divider)">
     <span style="font-family:var(--font-heading);font-weight:600;font-size:20px;letter-spacing:0.02em">Escape Room · Superadmin</span>
-    <span style="font-size:14px;font-variant-numeric:tabular-nums;color:var(--color-neutral-700)">{{ clock }}</span>
+    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+      <span style="font-size:14px;font-variant-numeric:tabular-nums;color:var(--color-neutral-700)">{{ clock }}</span>
+      <span style="font-size:14px;color:var(--color-neutral-700)">Angemeldet als Root</span>
+      <a href="Betreuer.dc.html" style="font-size:14px;text-decoration:none">Betreuer-Konsole</a>
+      <button class="btn btn-secondary" onClick="{{ logout }}" style="font-size:14px">Abmelden</button>
+    </div>
   </header>
   <main style="max-width:1080px;margin:0 auto;padding:36px 28px 90px;display:flex;flex-direction:column;gap:28px;box-sizing:border-box">
     <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap">
@@ -31,7 +36,8 @@
       <span style="font-size:11px;letter-spacing:0.12em;color:var(--color-neutral-700)">NEUER STANDORT</span>
       <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end">
         <div class="field" style="flex:2 1 220px"><label>Bezeichnung</label><input class="input" value="{{ name }}" onChange="{{ onName }}" placeholder="z.B. Köln Zentrum" style="min-height:42px;font-size:15px"></div>
-        <div class="field" style="flex:1 1 160px"><label>Stadt</label><input class="input" value="{{ city }}" onChange="{{ onCity }}" onKeyDown="{{ onKey }}" placeholder="Köln" style="min-height:42px;font-size:15px"></div>
+        <div class="field" style="flex:1 1 160px"><label>Stadt</label><input class="input" value="{{ city }}" onChange="{{ onCity }}" placeholder="Köln" style="min-height:42px;font-size:15px"></div>
+        <div class="field" style="flex:1 1 180px"><label>Betreuer-Passwort</label><input class="input" type="password" value="{{ pw }}" onChange="{{ onPw }}" onKeyDown="{{ onKey }}" placeholder="mind. 4 Zeichen" style="min-height:42px;font-size:15px"></div>
         <button class="btn btn-primary" onClick="{{ add }}" disabled="{{ full }}" style="min-height:42px;padding:0 24px;font-size:16px">Hinzufügen</button>
       </div>
       <sc-if value="{{ err }}" hint-placeholder-val="{{ false }}"><span style="font-size:14px;font-weight:500">✕ {{ err }}</span></sc-if>
@@ -61,6 +67,7 @@
                 <div style="display:flex;gap:12px;justify-content:flex-end;align-items:center">
                   <a href="{{ r.monitorUrl }}" style="font-size:14px;text-decoration:none;white-space:nowrap">Monitoring</a>
                   <a href="{{ r.terminalUrl }}" target="_blank" style="font-size:14px;text-decoration:none;white-space:nowrap">Terminal ↗</a>
+                  <button class="btn btn-secondary" onClick="{{ r.setPw }}" style="font-size:13px;white-space:nowrap">Passwort ändern</button>
                   <button class="btn" onClick="{{ r.del }}" style="font-size:13px;white-space:nowrap;background:{{ r.delBg }};color:{{ r.delColor }};border-color:{{ r.delBorder }}">{{ r.delLabel }}</button>
                 </div>
               </td>
@@ -71,21 +78,28 @@
       <sc-if value="{{ empty }}" hint-placeholder-val="{{ false }}"><p style="margin:0;padding:24px 16px;color:var(--color-neutral-700)">Noch keine Standorte angelegt.</p></sc-if>
     </section>
   </main>
-  <sc-if value="{{ showNav }}" hint-placeholder-val="{{ true }}">
-    <nav style="position:fixed;right:16px;bottom:16px;display:flex;gap:2px;padding:4px;background:var(--color-bg);border:1px solid var(--color-divider);box-shadow:var(--shadow-md);font-size:13px">
-      <span style="padding:6px 10px;color:var(--color-neutral-500)">Prototyp</span>
-      <a href="Spieler.dc.html" style="padding:6px 10px;text-decoration:none">Spieler</a>
-      <a href="Betreuer.dc.html" style="padding:6px 10px;text-decoration:none">Betreuer</a>
-      <a href="Superadmin.dc.html" style="padding:6px 10px;text-decoration:none">Superadmin</a>
-    </nav>
+  <sc-if value="{{ showPwDialog }}" hint-placeholder-val="{{ false }}">
+    <div class="dialog-backdrop" style="z-index:20">
+      <div class="dialog blueprint" style="background:var(--color-bg)">
+        <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+        <span class="dialog-title">Betreuer-Passwort · {{ pwLocName }}</span>
+        <span class="dialog-body">Das neue Passwort gilt sofort. Bereits angemeldete Betreuer dieses Standorts werden abgemeldet.</span>
+        <div class="field"><label>Neues Passwort</label><input class="input" type="password" value="{{ newPw }}" onChange="{{ onNewPw }}" onKeyDown="{{ onNewPwKey }}" placeholder="mind. 4 Zeichen" style="min-height:42px;font-size:15px"></div>
+        <sc-if value="{{ pwErr }}" hint-placeholder-val="{{ false }}"><span style="font-size:14px;font-weight:500">✕ {{ pwErr }}</span></sc-if>
+        <div class="dialog-actions">
+          <button class="btn btn-secondary" onClick="{{ closePw }}">Abbrechen</button>
+          <button class="btn btn-primary" onClick="{{ savePw }}">Speichern</button>
+        </div>
+      </div>
+    </div>
   </sc-if>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props="{&quot;showProtoNav&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;}}">
+<script type="text/x-dc" data-dc-script data-props="{}">
 class Component extends DCLogic {
   MAX = 8;
   STAGES = ['Login', 'Programmierung', 'KI-Training', 'Geschafft'];
-  state = { now: Date.now(), name: '', city: '', err: '', confirm: null, busy: false };
+  state = { now: Date.now(), name: '', city: '', pw: '', err: '', confirm: null, busy: false, pwLoc: null, newPw: '', pwErr: '' };
   // Serverzustand (per Polling) und Uhrabgleich zum Server
   db = null; off = 0;
 
@@ -93,6 +107,7 @@ class Component extends DCLogic {
   api(path, body, method) {
     const opt = body === undefined && !method ? { cache: 'no-store' } : { method: method || 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}) };
     return fetch(location.origin + '/api' + path, opt).then(r => r.json().catch(() => ({})).then(d => {
+      if (r.status === 401 || r.status === 403) { window.location.href = '/'; throw new Error('Bitte erneut anmelden.'); }
       if (d.state) this.apply(d.state);
       if (!r.ok) throw new Error(d.error || 'Serverfehler (' + r.status + ')');
       return d;
@@ -112,11 +127,12 @@ class Component extends DCLogic {
 
   add() {
     if (this.state.busy) return;
-    const name = this.state.name.trim(), city = this.state.city.trim();
+    const name = this.state.name.trim(), city = this.state.city.trim(), password = this.state.pw.trim();
     if (!name || !city) return this.setState({ err: 'Bitte Bezeichnung und Stadt angeben.' });
+    if (password.length < 4) return this.setState({ err: 'Das Betreuer-Passwort braucht mindestens 4 Zeichen.' });
     this.setState({ busy: true });
-    this.api('/locations', { name, city })
-      .then(() => this.setState({ name: '', city: '', err: '', busy: false }))
+    this.api('/locations', { name, city, password })
+      .then(() => this.setState({ name: '', city: '', pw: '', err: '', busy: false }))
       .catch(e => this.setState({ err: e.message, busy: false }));
   }
   del(id) {
@@ -127,6 +143,15 @@ class Component extends DCLogic {
     this.setState({ confirm: null });
     this.api('/locations/' + encodeURIComponent(id), undefined, 'DELETE').catch(e => this.setState({ err: e.message }));
   }
+  savePw() {
+    if (this.state.busy) return;
+    const password = this.state.newPw.trim();
+    if (password.length < 4) return this.setState({ pwErr: 'Das Passwort braucht mindestens 4 Zeichen.' });
+    this.setState({ busy: true });
+    this.api('/locations/' + encodeURIComponent(this.state.pwLoc) + '/password', { password })
+      .then(() => this.setState({ busy: false, pwLoc: null, newPw: '', pwErr: '' }))
+      .catch(e => this.setState({ busy: false, pwErr: e.message }));
+  }
   renderVals() {
     const db = this.db || { locations: [], sessions: {} }; const now = this.state.now;
     const status = s => {
@@ -136,7 +161,7 @@ class Component extends DCLogic {
       if (s.status === 'paused') return 'Pausiert';
       return 'Läuft';
     };
-    const cfg = window.ESCAPE_CONFIG;
+    const pwLoc = db.locations.find(l => l.id === this.state.pwLoc);
     return {
       clock: new Date(now).toLocaleTimeString('de-DE'),
       count: String(db.locations.length),
@@ -144,6 +169,14 @@ class Component extends DCLogic {
       name: this.state.name, city: this.state.city, err: this.state.err,
       onName: e => this.setState({ name: e.target.value, err: '' }),
       onCity: e => this.setState({ city: e.target.value, err: '' }),
+      onPw: e => this.setState({ pw: e.target.value, err: '' }),
+      pw: this.state.pw,
+      logout: () => fetch(location.origin + '/api/auth/logout', { method: 'POST' }).finally(() => { window.location.href = '/'; }),
+      showPwDialog: !!pwLoc, pwLocName: pwLoc ? pwLoc.name : '', newPw: this.state.newPw, pwErr: this.state.pwErr,
+      onNewPw: e => this.setState({ newPw: e.target.value, pwErr: '' }),
+      onNewPwKey: e => { if (e.key === 'Enter') this.savePw(); if (e.key === 'Escape') this.setState({ pwLoc: null }); },
+      closePw: () => this.setState({ pwLoc: null }),
+      savePw: () => this.savePw(),
       onKey: e => { if (e.key === 'Enter') this.add(); },
       add: () => this.add(), full: db.locations.length >= this.MAX || this.state.busy,
       empty: !!this.db && !db.locations.length,
@@ -155,11 +188,11 @@ class Component extends DCLogic {
           team: s && s.team ? s.team : '—', stage: s && s.status !== 'idle' ? this.STAGES[s.stage] : '—',
           time: s && s.status === 'finished' ? this.fmt(s.elapsed) : this.fmt(this.remaining(s, now)),
           monitorUrl: 'Betreuer.dc.html?loc=' + l.id, terminalUrl: 'Spieler.dc.html?loc=' + l.id,
+          setPw: () => this.setState({ pwLoc: l.id, newPw: '', pwErr: '' }),
           del: () => this.del(l.id), delLabel: c ? 'Wirklich löschen?' : 'Löschen',
           delBg: c ? 'var(--color-text)' : 'transparent', delColor: c ? 'var(--color-bg)' : 'var(--color-neutral-700)', delBorder: c ? 'var(--color-text)' : 'var(--color-divider)'
         };
-      }),
-      showNav: (this.props.showProtoNav ?? true) && (cfg ? cfg.protoNav : true)
+      })
     };
   }
 }

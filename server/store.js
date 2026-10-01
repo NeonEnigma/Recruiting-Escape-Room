@@ -3,9 +3,11 @@
 //  - PostgreSQL, wenn ein Service gebunden ist (BTP: postgresql-db) oder DATABASE_URL gesetzt ist
 //  - sonst eine lokale Datei (data/state.json). Auf Cloud Foundry ist das Dateisystem
 //    flüchtig – ohne Datenbank gehen Standorte bei Restart/Restage verloren.
+const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const game = require('./game');
+const { hashPassword } = require('./auth');
 
 function postgresConfig() {
   if (process.env.DATABASE_URL) return { connectionString: process.env.DATABASE_URL };
@@ -62,22 +64,25 @@ function postgresBackend(cfg) {
 }
 
 function seed() {
-  const db = { locations: game.DEFAULT_LOCATIONS.map(l => ({ ...l })), sessions: {} };
-  db.locations.forEach(l => { db.sessions[l.id] = game.freshSession(); });
-  return db;
+  return { locations: game.DEFAULT_LOCATIONS.map(l => ({ ...l })), sessions: {} };
 }
 
-function normalize(db) {
-  if (!db || !Array.isArray(db.locations)) return seed();
+// Ergänzt fehlende Felder, z.B. nach einem Update oder beim ersten Start.
+function normalize(db, config) {
+  if (!db || !Array.isArray(db.locations)) db = seed();
   db.sessions = db.sessions || {};
-  db.locations.forEach(l => { if (!db.sessions[l.id]) db.sessions[l.id] = game.freshSession(); });
+  db.secret = db.secret || crypto.randomBytes(32).toString('hex');
+  db.locations.forEach(l => {
+    if (!l.betreuerHash) l.betreuerHash = hashPassword(config.betreuerPassword);
+    if (!db.sessions[l.id]) db.sessions[l.id] = game.freshSession();
+  });
   return db;
 }
 
-async function createStore() {
+async function createStore(config) {
   const pg = postgresConfig();
   const backend = pg ? postgresBackend(pg) : fileBackend();
-  const db = normalize(await backend.load());
+  const db = normalize(await backend.load(), config);
   let chain = Promise.resolve();
 
   const store = {

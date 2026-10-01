@@ -4,7 +4,7 @@ const path = require('path');
 const { createRouter, createServer, serveStatic } = require('./http');
 const { createStore } = require('./store');
 const { registerApi } = require('./api');
-const { requireRole } = require('./auth');
+const { createAuth } = require('./auth');
 
 const ROOT = path.join(__dirname, '..');
 const PROD = process.env.NODE_ENV === 'production';
@@ -19,11 +19,10 @@ function secret(name, devDefault) {
 }
 
 const config = {
-  adminPassword: secret('ADMIN_PASSWORD', 'admin'),
+  rootPassword: secret('ROOT_PASSWORD', 'root'),
+  // Startpasswort der Betreuer für Standorte ohne eigenes Passwort (änderbar im Superadmin)
   betreuerPassword: secret('BETREUER_PASSWORD', 'betreuer'),
   playerPassword: process.env.PLAYER_PASSWORD || 'onboarding',
-  // Prototyp-Navigation unten rechts (Spieler/Betreuer/Superadmin) – lokal an, produktiv aus
-  protoNav: process.env.SHOW_PROTO_NAV ? process.env.SHOW_PROTO_NAV === 'true' : !PROD,
   liveReload: !PROD && process.env.LIVE_RELOAD !== 'false'
 };
 
@@ -51,7 +50,6 @@ function configScript() {
     };
     js += `window.__resources = Object.assign(window.__resources || {}, ${JSON.stringify(resources)});\n`;
   }
-  js += `window.ESCAPE_CONFIG = ${JSON.stringify({ protoNav: config.protoNav })};\n`;
   if (config.liveReload) {
     // Lädt die Seite neu, wenn sich Design-Dateien ändern oder der Server neu gestartet wurde.
     js += `(function () { var seen = false, es = new EventSource('/__livereload');
@@ -80,11 +78,12 @@ function liveReload(router) {
 }
 
 async function main() {
-  const store = await createStore();
+  const store = await createStore(config);
+  const auth = createAuth(store, config);
   const router = createRouter();
 
   router.get('/health', (req, res) => res.json({ ok: true }));
-  registerApi(router, store, config);
+  registerApi(router, store, config, auth);
 
   router.get('/config.js', (req, res) => res.type('js').set('Cache-Control', 'no-store').send(configScript()));
   router.get('/vendor/:file', (req, res) => {
@@ -98,13 +97,14 @@ async function main() {
   router.get('/', (req, res) => res.redirect('/Spieler.dc.html'));
   router.get('/spieler', (req, res) => res.redirect('/Spieler.dc.html' + (req.query.loc ? '?loc=' + encodeURIComponent(req.query.loc) : '')));
   router.get('/betreuer', (req, res) => res.redirect('/Betreuer.dc.html'));
+  router.get('/root', (req, res) => res.redirect('/Superadmin.dc.html'));
   router.get('/admin', (req, res) => res.redirect('/Superadmin.dc.html'));
 
   // Nur die Design-Dateien werden ausgeliefert – nicht Server-Code oder Konfiguration.
   const page = (file, ...guards) => router.get('/' + file, ...guards, (req, res) => res.set('Cache-Control', 'no-cache').sendFile(path.join(ROOT, file)));
   page('Spieler.dc.html');
-  page('Betreuer.dc.html', requireRole(config, ['betreuer', 'admin']));
-  page('Superadmin.dc.html', requireRole(config, ['admin']));
+  page('Betreuer.dc.html', auth.page(['betreuer', 'root']));
+  page('Superadmin.dc.html', auth.page(['root']));
   page('support.js');
 
   const ds = path.join(ROOT, '_ds');
@@ -116,13 +116,24 @@ async function main() {
     res.status(404).type('text').send('Nicht gefunden.');
   };
 
-  createServer(router, fallback).listen(PORT, () => {
-    console.log(`Escape Room läuft auf http://localhost:${PORT}`);
+  const server = createServer(router, fallback);
+  let port = +PORT;
+  // Lokal ohne festen PORT auf den nächsten freien Port ausweichen, statt abzubrechen.
+  server.on('error', err => {
+    if (err.code === 'EADDRINUSE' && !process.env.PORT && port < +PORT + 20) {
+      console.warn(`Port ${port} ist belegt – versuche ${port + 1} …`);
+      server.listen(++port);
+      return;
+    }
+    if (err.code === 'EADDRINUSE') console.error(`Port ${port} ist belegt. Anderen Port wählen, z.B.: PORT=4000 npm run dev`);
+    else console.error(err);
+    process.exit(1);
+  });
+  server.listen(port, () => {
+    console.log(`Escape Room läuft auf http://localhost:${port}`);
     console.log(`  Speicher:   ${store.backend}`);
-    console.log(`  Spieler:    /Spieler.dc.html`);
-    console.log(`  Betreuer:   /Betreuer.dc.html   (Benutzer: betreuer)`);
-    console.log(`  Superadmin: /Superadmin.dc.html (Benutzer: admin)`);
-    if (!PROD && !process.env.ADMIN_PASSWORD) console.log('  Lokale Passwörter: admin/admin, betreuer/betreuer, Spieler: onboarding');
+    console.log('  Start: Standort wählen, dann als Spieler oder Betreuer anmelden – oder als Root');
+    if (!PROD && !process.env.ROOT_PASSWORD) console.log('  Lokale Passwörter: Root "root", Betreuer "betreuer" (je Standort änderbar), Team "onboarding"');
     if (config.liveReload) console.log('  Live-Reload aktiv');
   });
 }

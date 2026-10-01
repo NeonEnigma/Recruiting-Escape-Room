@@ -1,6 +1,6 @@
 const crypto = require('crypto');
 const game = require('./game');
-const { requireRole } = require('./auth');
+const { hashPassword } = require('./auth');
 
 // Öffentliche Sicht auf eine Session – ohne Spieler-Token.
 function publicSession(s) {
@@ -8,7 +8,12 @@ function publicSession(s) {
   return { ...rest, solved: !!solvedAt };
 }
 
-function registerApi(router, store, config) {
+// Öffentliche Sicht auf einen Standort – ohne Passwort-Hash.
+const publicLocation = ({ id, name, city }) => ({ id, name, city });
+
+const validPassword = pw => typeof pw === 'string' && pw.trim().length >= 4;
+
+function registerApi(router, store, config, auth) {
   const db = store.db;
 
   const snapshot = () => {
@@ -16,7 +21,7 @@ function registerApi(router, store, config) {
     if (game.autoFinish(db, now)) store.persist();
     const sessions = {};
     for (const l of db.locations) sessions[l.id] = publicSession(db.sessions[l.id]);
-    return { serverNow: now, locations: db.locations, sessions };
+    return { serverNow: now, locations: db.locations.map(publicLocation), sessions };
   };
   const fail = (res, status, error) => res.status(status).json({ error, state: snapshot() });
   const done = (res, extra) => { store.persist(); res.json({ ...extra, state: snapshot() }); };
@@ -30,6 +35,24 @@ function registerApi(router, store, config) {
   // ---------- Öffentlich ----------
   router.get('/api/state', (req, res) => res.json(snapshot()));
   router.get('/api/puzzle', (req, res) => res.json(game.puzzle));
+
+  // ---------- Anmeldung Betreuer / Root ----------
+  router.post('/api/auth/login', (req, res) => {
+    const role = req.body.role === 'root' ? 'root' : 'betreuer';
+    const who = auth.login(role, req.body.loc, String(req.body.password || ''));
+    if (!who) return res.status(401).json({ error: 'Passwort ungültig.' });
+    auth.setCookie(req, res, who);
+    res.json({ role: who.role, loc: who.loc || null });
+  });
+  router.post('/api/auth/logout', (req, res) => { auth.clearCookie(res); res.json({ ok: true }); });
+
+  // Entsperrt ein Spieler-Terminal: Betreuer-Passwort des Standorts oder Root-Passwort.
+  router.post('/api/auth/check', (req, res) => {
+    const pw = String(req.body.password || '');
+    const ok = auth.login('betreuer', req.body.loc, pw) || auth.login('root', null, pw);
+    if (!ok) return res.status(401).json({ error: 'Passwort ungültig.' });
+    res.json({ ok: true });
+  });
 
   // ---------- Spieler-Terminal ----------
   router.post('/api/terminal/:loc/login', (req, res) => {
@@ -77,8 +100,8 @@ function registerApi(router, store, config) {
   });
 
   // ---------- Betreuer ----------
-  const staff = requireRole(config, ['betreuer', 'admin']);
-  router.get('/api/staff', staff, (req, res) => res.json({ role: req.role, playerPassword: config.playerPassword }));
+  const staff = auth.api(['betreuer', 'root']);
+  router.get('/api/staff', staff, (req, res) => res.json({ role: req.who.role, loc: req.who.loc || null, playerPassword: config.playerPassword }));
 
   // Läuft die Zeit, wird die bisher verstrichene Zeit festgeschrieben (höchstens bis zum Ende).
   function settle(s, now) {
@@ -133,19 +156,31 @@ function registerApi(router, store, config) {
     done(res);
   });
 
-  // ---------- Superadmin ----------
-  const admin = requireRole(config, ['admin']);
+  // ---------- Superadmin (Root) ----------
+  const admin = auth.api(['root']);
 
   router.post('/api/locations', admin, (req, res) => {
     const name = String(req.body.name || '').trim().slice(0, 60);
     const city = String(req.body.city || '').trim().slice(0, 60);
+    const password = req.body.password;
     if (db.locations.length >= game.MAX_LOCATIONS) return fail(res, 409, 'Maximal ' + game.MAX_LOCATIONS + ' Standorte möglich. Bitte zuerst einen löschen.');
     if (!name || !city) return fail(res, 400, 'Bitte Bezeichnung und Stadt angeben.');
+    if (!validPassword(password)) return fail(res, 400, 'Das Betreuer-Passwort braucht mindestens 4 Zeichen.');
     if (db.locations.some(l => l.name.toLowerCase() === name.toLowerCase())) return fail(res, 409, 'Dieser Standort existiert bereits.');
     const id = game.slugId(city, db.locations);
-    db.locations.push({ id, name, city });
+    db.locations.push({ id, name, city, betreuerHash: hashPassword(password.trim()), authV: 0 });
     db.sessions[id] = game.freshSession();
     done(res, { id });
+  });
+
+  // Neues Betreuer-Passwort; bestehende Betreuer-Anmeldungen des Standorts werden ungültig.
+  router.post('/api/locations/:loc/password', admin, (req, res) => {
+    const loc = db.locations.find(l => l.id === req.params.loc);
+    if (!loc) return fail(res, 404, 'Standort nicht gefunden.');
+    if (!validPassword(req.body.password)) return fail(res, 400, 'Das Passwort braucht mindestens 4 Zeichen.');
+    loc.betreuerHash = hashPassword(req.body.password.trim());
+    loc.authV = (loc.authV || 0) + 1;
+    done(res);
   });
 
   router.delete('/api/locations/:loc', admin, (req, res) => {
